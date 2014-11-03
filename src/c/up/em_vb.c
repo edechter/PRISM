@@ -152,7 +152,9 @@ int run_vbem(VBEM_ENG_PTR vb_ptr)
         if (r == 0 || free_energy > vb_ptr->free_energy) {
             vb_ptr->free_energy = free_energy;
             vb_ptr->iterate     = iterate;
-            vb_ptr->likelihood  = l2;
+            vb_ptr->l0  = l0;
+            vb_ptr->l1  = l1;
+            vb_ptr->l2  = l2;
 
             saved = (r < num_restart - 1);
             if (saved) {
@@ -166,6 +168,56 @@ int run_vbem(VBEM_ENG_PTR vb_ptr)
     }
 
     transfer_hyperparams();
+
+    return BP_TRUE;
+}
+
+
+/* ------------------------------------------------------------------------------------------*/
+
+/* Added 10/4/2014 by Eyal Dechter */
+
+int compute_free_energy(VBEM_ENG_PTR vb_ptr)
+{
+    double  free_energy;
+    double  l0, l1, l2;
+
+    config_vbem(vb_ptr);
+
+    RET_ON_ERR(vb_ptr->compute_pi());
+    RET_ON_ERR(vb_ptr->compute_inside());
+    RET_ON_ERR(vb_ptr->examine_inside());
+
+    initialize_hyperparams();
+    itemp = daem ? itemp_init : 1.0;
+
+    /* compute free_energy */
+    l0 = vb_ptr->compute_free_energy_l0();
+    l1 = vb_ptr->compute_free_energy_l1();
+    l2 = vb_ptr->compute_likelihood() / itemp; /* itemp == 1.0 for non-DAEM */
+    free_energy = l0 - l1 + l2;
+    vb_ptr->free_energy = free_energy;
+    vb_ptr->l0 = l0;    
+    vb_ptr->l1 = l1;    
+    vb_ptr->l2 = l2;    
+
+    if (verb_em) {
+        prism_printf("free_energy=%.9f\n", free_energy);
+        prism_printf("l0=%.9f\n", l0);
+        prism_printf("l1=%.9f\n", l1);
+        prism_printf("l2=%.9f\n", l2);
+    }
+
+    if (debug_level) {
+        prism_printf("free_energy = %.9f\n", free_energy);
+        print_egraph(debug_level, PRINT_VBEM);
+    }
+
+    if (!isfinite(free_energy)) {
+        /* emit_internal_error("invalid variational free energy: %s (at iteration #%d)", */
+        /* isnan(free_energy) ? "NaN" : "infinity", iterate); */
+        RET_ERR(err_invalid_free_energy);
+    }
 
     return BP_TRUE;
 }

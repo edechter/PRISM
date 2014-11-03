@@ -86,6 +86,7 @@ void bp4p_register_preds(void)
     REGISTER_CPRED(prism_both_em,2);
     REGISTER_CPRED(compute_inside,2);
     REGISTER_CPRED(compute_probf,1);
+    REGISTER_CPRED(compute_free_energy,4);
 
     /* up/vt_preds.c */
     REGISTER_CPRED(prism_vt,4);

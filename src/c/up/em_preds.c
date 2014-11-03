@@ -88,7 +88,7 @@ int pc_prism_vbem_2(void)
 }
 
 /* Added 10/3/2014 by Eyal Dechter 
-- Return variational lower bound E_q(log p(G|theta)) as third argument. x
+- Return variational lower bound E_q(log p(G|theta)) as third argument. 
 */
 int pc_prism_vbem_3(void)
 {
@@ -100,7 +100,7 @@ int pc_prism_vbem_3(void)
     return
         bpx_unify(bpx_get_call_arg(1,3), bpx_build_integer(vb_eng.iterate)) &&
         bpx_unify(bpx_get_call_arg(2,3), bpx_build_float(vb_eng.free_energy)) &&
-        bpx_unify(bpx_get_call_arg(3,3), bpx_build_float(vb_eng.likelihood));
+        bpx_unify(bpx_get_call_arg(3,3), bpx_build_float(vb_eng.l2));
 }
 
 
@@ -187,3 +187,18 @@ int pc_compute_probf_1(void)
 }
 
 /*------------------------------------------------------------------------*/
+
+/* Added 10/3/2014 by Eyal Dechter */
+int pc_compute_free_energy_4(void)
+{
+    struct VBEM_Engine vb_eng;
+
+    RET_ON_ERR(check_smooth_vb());
+    RET_ON_ERR(compute_free_energy(&vb_eng));
+
+    return
+        bpx_unify(bpx_get_call_arg(1,4), bpx_build_integer(vb_eng.free_energy)) &&
+        bpx_unify(bpx_get_call_arg(2,4), bpx_build_integer(vb_eng.l0)) &&
+        bpx_unify(bpx_get_call_arg(3,4), bpx_build_integer(vb_eng.l1)) &&
+        bpx_unify(bpx_get_call_arg(4,4), bpx_build_integer(vb_eng.l2));
+}

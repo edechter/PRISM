@@ -26,6 +26,7 @@ PL_UP    = up/dynamic.pl        \
            up/mcmc.pl           \
            up/prob.pl           \
            up/viterbi.pl        \
+           up/vb.pl        \
            up/hindsight.pl      \
            up/expl.pl           \
            up/sample.pl         \
