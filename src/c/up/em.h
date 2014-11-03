@@ -29,6 +29,7 @@ struct EM_Engine {
 struct VBEM_Engine {
     double  free_energy;        /* [out] free energy */
     int     iterate;            /* [out] number of iterations */
+    double  likelihood;         /* [out] expected log likelihood (variational lower bound) */
 
     /* Functions called during computation. */
     int     (* compute_pi             )(void);

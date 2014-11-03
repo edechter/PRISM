@@ -82,6 +82,7 @@ void bp4p_register_preds(void)
     REGISTER_CPRED(prism_prepare,4);
     REGISTER_CPRED(prism_em,6);
     REGISTER_CPRED(prism_vbem,2);
+    REGISTER_CPRED(prism_vbem,3);
     REGISTER_CPRED(prism_both_em,2);
     REGISTER_CPRED(compute_inside,2);
     REGISTER_CPRED(compute_probf,1);

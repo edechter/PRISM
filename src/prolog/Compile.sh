@@ -22,7 +22,7 @@ case `uname -s` in
         ;;
     Darwin)
         DARWIN_MAJOR=`uname -r | cut -d. -f 1`
-        BINARY=$BINDIR/prism_up_darwin${DARWIN_MAJOR}.bin
+        BINARY=$BINDIR/prism_up_darwin10.bin
         ;;
     CYGWIN*)
         BINARY=$BINDIR/prism_up_cygwin.exe

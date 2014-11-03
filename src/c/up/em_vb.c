@@ -152,6 +152,7 @@ int run_vbem(VBEM_ENG_PTR vb_ptr)
         if (r == 0 || free_energy > vb_ptr->free_energy) {
             vb_ptr->free_energy = free_energy;
             vb_ptr->iterate     = iterate;
+            vb_ptr->likelihood  = l2;
 
             saved = (r < num_restart - 1);
             if (saved) {
