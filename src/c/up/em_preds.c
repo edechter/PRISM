@@ -197,8 +197,8 @@ int pc_compute_free_energy_4(void)
     RET_ON_ERR(compute_free_energy(&vb_eng));
 
     return
-        bpx_unify(bpx_get_call_arg(1,4), bpx_build_integer(vb_eng.free_energy)) &&
-        bpx_unify(bpx_get_call_arg(2,4), bpx_build_integer(vb_eng.l0)) &&
-        bpx_unify(bpx_get_call_arg(3,4), bpx_build_integer(vb_eng.l1)) &&
-        bpx_unify(bpx_get_call_arg(4,4), bpx_build_integer(vb_eng.l2));
+        bpx_unify(bpx_get_call_arg(1,4), bpx_build_float(vb_eng.free_energy)) &&
+        bpx_unify(bpx_get_call_arg(2,4), bpx_build_float(vb_eng.l0)) &&
+        bpx_unify(bpx_get_call_arg(3,4), bpx_build_float(vb_eng.l1)) &&
+        bpx_unify(bpx_get_call_arg(4,4), bpx_build_float(vb_eng.l2));
 }
