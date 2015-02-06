@@ -123,14 +123,19 @@ $pp_expl_one_goal(Goal) :-
 $pp_expl_one_goal(Goal) :-
     % FIXME: handling non-tabled probabilistic predicate is future work
     $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),$pp_expl_one_goal/1),
-    ( ground(Goal) -> GoalCp = Goal
-    ; copy_term(Goal,GoalCp)
+    ( 
+        ground(Goal) -> 
+            GoalCp = Goal
+        ; 
+        copy_term(Goal,GoalCp)
     ),
-    ( $pp_trans_one_goal(GoalCp,CompGoal) ->
-        call(CompGoal)
-    ; savecp(CP),
-      Depth = 0,
-      $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_)
+    ( 
+        $pp_trans_one_goal(GoalCp,CompGoal) ->
+            call(CompGoal)
+        ; 
+        savecp(CP),
+        Depth = 0,
+        $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_)
     ).
 
 %..$pp_trans_one_goal(+Goal, ?CompGoal)
@@ -228,53 +233,64 @@ $pp_expl_interp_goal((C->A;B),Depth,CP,
                      CIDs0,CIDs,SWs0,SWs,
                      SimCIDs0,SimCIDs,SimSWs0,SimSWs) =>
     '_$savecp'(NewCP),
-    ( eval_debug_call(C,Depth,NewCP) ->
-        $pp_expl_interp_goal(A,Depth,CP,
+    ( 
+        eval_debug_call(C,Depth,NewCP) ->
+            $pp_expl_interp_goal(A,Depth,CP,
+                                 CIDs0,CIDs,SWs0,SWs,
+                                 SimCIDs0,SimCIDs,SimSWs0,SimSWs)
+        ; 
+        $pp_expl_interp_goal(B,Depth,CP,
                              CIDs0,CIDs,SWs0,SWs,
                              SimCIDs0,SimCIDs,SimSWs0,SimSWs)
-    ; $pp_expl_interp_goal(B,Depth,CP,
-                           CIDs0,CIDs,SWs0,SWs,
-                           SimCIDs0,SimCIDs,SimSWs0,SimSWs)
     ).
 $pp_expl_interp_goal((C->A),Depth,CP,
                      CIDs0,CIDs,SWs0,SWs,
                      SimCIDs0,SimCIDs,SimSWs0,SimSWs) =>
     '_$savecp'(NewCP),
-    ( eval_debug_call(C,Depth,NewCP) ->
-        $pp_expl_interp_goal(A,Depth,CP,
-                             CIDs0,CIDs,SWs0,SWs,
-                             SimCIDs0,SimCIDs,SimSWs0,SimSWs)
+    ( 
+        eval_debug_call(C,Depth,NewCP) ->
+            $pp_expl_interp_goal(A,Depth,CP,
+                                 CIDs0,CIDs,SWs0,SWs,
+                                 SimCIDs0,SimCIDs,SimSWs0,SimSWs)
     ).
 $pp_expl_interp_goal((A;B),Depth,CP,
                      CIDs0,CIDs,SWs0,SWs,
                      SimCIDs0,SimCIDs,SimSWs0,SimSWs) =>
-     ( $pp_expl_interp_goal(A,Depth,CP,
-                            CIDs0,CIDs,SWs0,SWs,
-                            SimCIDs0,SimCIDs,SimSWs0,SimSWs)
-     ; $pp_expl_interp_goal(B,Depth,CP,
-                            CIDs0,CIDs,SWs0,SWs,
-                            SimCIDs0,SimCIDs,SimSWs0,SimSWs)
+     ( 
+         $pp_expl_interp_goal(A,Depth,CP,
+                              CIDs0,CIDs,SWs0,SWs,
+                              SimCIDs0,SimCIDs,SimSWs0,SimSWs)
+         ; 
+         $pp_expl_interp_goal(B,Depth,CP,
+                              CIDs0,CIDs,SWs0,SWs,
+                              SimCIDs0,SimCIDs,SimSWs0,SimSWs)
      ).
 $pp_expl_interp_goal(not(A),Depth,_CP,
                      CIDs0,CIDs,SWs0,SWs,
                      SimCIDs0,SimCIDs,SimSWs0,SimSWs) =>
     '_$savecp'(NewCP),
-    ( $pp_expl_interp_goal(A,Depth,NewCP,
-                           CIDs0,CIDs,SWs0,SWs,
-                           SimCIDs0,SimCIDs,SimSWs0,SimSWs) -> fail
-    ; CIDs    = CIDs0,
-      SWs     = SWs0,
-      SimCIDs = SimCIDs0,
-      SimSWs  = SimSWs0
+    ( 
+        $pp_expl_interp_goal(A,Depth,NewCP,
+                             CIDs0,CIDs,SWs0,SWs,
+                             SimCIDs0,SimCIDs,SimSWs0,SimSWs) -> 
+            fail
+        ; 
+        CIDs    = CIDs0,
+        SWs     = SWs0,
+        SimCIDs = SimCIDs0,
+        SimSWs  = SimSWs0
     ).
 $pp_expl_interp_goal((\+ A),Depth,_CP,
                      CIDs0,CIDs,SWs0,SWs,
                      SimCIDs0,SimCIDs,SimSWs0,SimSWs) =>
     '_$savecp'(NewCP),
-    ( $pp_expl_interp_goal(A,Depth,NewCP,
+    ( 
+        $pp_expl_interp_goal(A,Depth,NewCP,
                            CIDs0,CIDs,SWs0,SWs,
-                           SimCIDs0,SimCIDs,SimSWs0,SimSWs) -> fail
-    ; CIDs    = CIDs0,
+                           SimCIDs0,SimCIDs,SimSWs0,SimSWs) -> 
+            fail
+      ; 
+      CIDs    = CIDs0,
       SWs     = SWs0,
       SimCIDs = SimCIDs0,
       SimSWs  = SimSWs0
@@ -284,10 +300,11 @@ $pp_expl_interp_goal('_$if_then_else'(C,A,B),Depth,CP,
                      SimCIDs0,SimCIDs,SimSWs0,SimSWs) =>
     '_$savecp'(NewCP),
     ( eval_debug_call(C,Depth,NewCP) ->
-        $pp_expl_interp_goal(A,Depth,CP,
-                             CIDs0,CIDs,SWs0,SWs,
-                             SimCIDs0,SimCIDs,SimSWs0,SimSWs)
-    ; $pp_expl_interp_goal(B,Depth,CP,
+          $pp_expl_interp_goal(A,Depth,CP,
+                               CIDs0,CIDs,SWs0,SWs,
+                               SimCIDs0,SimCIDs,SimSWs0,SimSWs)
+      ; 
+      $pp_expl_interp_goal(B,Depth,CP,
                            CIDs0,CIDs,SWs0,SWs,
                            SimCIDs0,SimCIDs,SimSWs0,SimSWs)
     ).
@@ -359,9 +376,11 @@ $pp_expl_interp_goal(Goal,Depth,CP,
     SWs     = SWs0,
     SimCIDs = SimCIDs0,
     SimSWs  = SimSWs0,
-    ( c_is_debug_mode ->
-        eval_debug_call(Goal,Depth,CP)
-    ; eval_call(Goal,CP)
+    ( 
+        c_is_debug_mode ->
+            eval_debug_call(Goal,Depth,CP)
+        ; 
+        eval_call(Goal,CP)
     ).
 
 %%----------------------------------------------------------------------------
@@ -387,11 +406,14 @@ $expl_interp_single_call(Goal,Depth,Gid) :- % suppress re-computation
                      % BodyCIDs is a list of children in Body
                      % BodySWs is a list of switches in Body
     $pc_prism_goal_id_register(Goal,Gid),
-    ( (BodyCIDs == [], BodySWs == []) -> true
-    ; c_get_dg_flag(Flag),
-      c_next_global_call_number(CallNo),
-      $print_call(Flag,'   Add: ',path(Goal,SimCIDs,SimSWs),Depth,CallNo,0),
-      $prism_eg_path(Gid,BodyCIDs,BodySWs)
+    ( 
+        (BodyCIDs == [], BodySWs == []) -> 
+            true
+        ; 
+        c_get_dg_flag(Flag),
+        c_next_global_call_number(CallNo),
+        $print_call(Flag,'   Add: ',path(Goal,SimCIDs,SimSWs),Depth,CallNo,0),
+        $prism_eg_path(Gid,BodyCIDs,BodySWs)
     ).
 
 %%----------------------------------------------------------------------------
@@ -400,10 +422,14 @@ $prism_eg_path(Pid,CIDs,SWs) :- $pc_add_egraph_path(Pid,CIDs,SWs).
 
 $prism_expl_msw(Sw,V,SwInsId) :-
     get_values1(Sw,Values),
-    ( $pc_prism_sw_id_get(Sw,SwId) -> true
-    ; $pc_prism_sw_id_register(Sw,SwId),
-      $pp_export_switch(SwId,Sw,Values)
-    ),!,
+    ( 
+        $pc_prism_sw_id_get(Sw,SwId) -> 
+            true
+        ; 
+        $pc_prism_sw_id_register(Sw,SwId),
+        $pp_export_switch(SwId,Sw,Values)
+    ),
+    !,
     member(V,Values),
     $pc_prism_sw_ins_id_get(msw(Sw,V),SwInsId).
 
@@ -425,14 +451,19 @@ $pp_print_goal_message(MsgS) :-
     get_prism_flag(search_progress,Ival),
     Ival > 0, !,
     global_get($pg_num_goals,N),
-    ( N =:= 0 ->
-        format("#goals: 0",[]),flush_output,
-        N1 is N + 1,
-        global_set($pg_num_goals,N1)
-    ; N > 0 ->
-        ( N mod (Ival * 10) =:= 0 -> format("~w",[N]),flush_output
-        ; N mod Ival =:= 0 -> format(".",[]),flush_output
-        ; true
+    ( 
+        N =:= 0 ->
+            format("#goals: 0",[]),flush_output,
+            N1 is N + 1,
+            global_set($pg_num_goals,N1)
+        ; 
+        N > 0 ->
+            ( N mod (Ival * 10) =:= 0 -> format("~w",[N]),flush_output
+        ; 
+        N mod Ival =:= 0 -> 
+            format(".",[]),flush_output
+        ; 
+        true
         ),
         N1 is N + 1,
         global_set($pg_num_goals,N1)
