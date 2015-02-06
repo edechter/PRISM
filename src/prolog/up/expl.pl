@@ -76,6 +76,16 @@
 %%    [msw(init,once,s0),msw(out(s0),1,a),msw(tr(s0),1,s0),msw(out(s0),2,b),...]
 %%
 
+%% Definitions ------------------------------------
+%%
+%% - Goal: a Prolog goals whose explanations we want. 
+%% 
+%% - CompGoal: (Computed Goal). We translate the input Goal input into
+%%             a special Prism goal, so that proof search over that
+%%             goal will record the explanation graph.
+
+%% ---------------------------------------------------------------------
+
 %%...pp_find_explanations(+Goals) where
 %%
 %%   Constructs explanation graphs for each goal in Goals and stores
@@ -86,15 +96,8 @@
 $pp_find_explanations(Goals) :-
     $pp_expl_goals_all(Goals).
 
-
-$pp_expl_failure :-    
-    $pp_trans_one_goal(failure,CompGoal),!,
-    call(CompGoal).
-$pp_expl_failure :-
-    savecp(CP),
-    Depth = 0,
-    $pp_expl_interp_goal(failure,Depth,CP,[],_,[],_,[],_,[],_).
-    
+%..$pp_expl_goals_all(+Goals)
+%  
 $pp_expl_goals_all(Goals) :-
     $pp_expl_goals(Goals).
 
@@ -130,6 +133,12 @@ $pp_expl_one_goal(Goal) :-
       $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_)
     ).
 
+%..$pp_trans_one_goal(+Goal, ?CompGoal)
+%
+%  Translate the predicate name of the goal to the predicate name of
+%  the computed goal according to the convention: 
+%  <F> --> $pu_expl_<F>
+% 
 % [Note] this predicate fails if Goal is not probabilistic
 $pp_trans_one_goal(Goal,CompGoal) :-
     functor(Goal,F,N),
@@ -141,7 +150,21 @@ $pp_trans_one_goal(Goal,CompGoal) :-
     Goal =.. [_|Args],
     CompGoal =.. [NewF,_|Args].
 
-%%----------------------------------------------------------------------------
+%...pp_expl_failure
+%
+%  FIXME: what is failure? $pp_expl_failure results in Undefined
+%         procedure: failure/0. This is probably a bug, and I can't
+%         see where failure would be used or generated.        
+%   
+$pp_expl_failure :-    
+    $pp_trans_one_goal(failure,CompGoal),!,
+    call(CompGoal).
+$pp_expl_failure :-
+    savecp(CP),
+    Depth = 0,
+    $pp_expl_interp_goal(failure,Depth,CP,[],_,[],_,[],_,[],_).
+
+%% ----------------------------------------------------------------------------
 
 $pp_expl_interp_goal('!',_Depth,CP,
                      CIDs0,CIDs,SWs0,SWs,
