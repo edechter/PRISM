@@ -3,7 +3,8 @@ free_energy([G], FreeEnergy, L0, L1, L2) :-
 free_energy([G|Gs], FreeEnergy, L0, L1, L2) :- 
     !, 
     free_energy(G, _, _, _, L2_1), 
-    free_energy(Gs, F1, L0, L1, L2), 
+    free_energy(Gs, F1, L0, L1, L2_2),
+    L2 is L2_1 + L2_2,
     FreeEnergy is F1 + L2_1.
 
 free_energy(Goal) :- 

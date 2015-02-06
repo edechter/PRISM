@@ -155,6 +155,7 @@ void bp4p_register_preds(void)
 
     /* up/util.c */
     REGISTER_CPRED(lngamma,2);
+    REGISTER_CPRED(digamma,2);
     REGISTER_CPRED(mult_ln,3);
     REGISTER_CPRED(mp_mode,0);
     REGISTER_CPRED(get_term_depth,2);

@@ -119,6 +119,15 @@ int pc_mult_ln_3(void)
 
 /*------------------------------------------------------------------------*/
 
+int pc_digamma_2(void)
+{
+    double x = bpx_get_float(bpx_get_call_arg(1,2));
+    TERM t = bpx_build_float(digamma(x));
+
+    return bpx_unify(bpx_get_call_arg(2,2),t);
+}
+
+/*------------------------------------------------------------------------*/
 int pc_mtrace_0(void)
 {
 #ifdef MALLOC_TRACE

@@ -13,6 +13,8 @@ int  get_term_depth(TERM);
 int  pc_lngamma_2(void);
 int  pc_mult_ln_3(void);
 
+int  pc_digamma_2(void);
+
 int  pc_mtrace_0(void);
 int  pc_muntrace_0(void);
 
