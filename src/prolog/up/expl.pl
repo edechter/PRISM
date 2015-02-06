@@ -1,9 +1,11 @@
 %%
 %%  expl.pl: routines for explanation search
 %%
-%%  $pp_find_explanations(Goals) constructs the explanation graphs for Goals.
-%%  An explanation graph is a directed hype-graph where each hype-arc takes
-%%  the form of:
+%%  $pp_find_explanations(Goals) constructs the explanation graphs for
+%%  Goals, and places those explanation graphs in memory.
+%%
+%%  An explanation graph is a directed hype-graph where each hype-arc
+%%  takes the form of:
 %%
 %%  $prism_eg_path(GoalId,Children,SWs)
 %%  
@@ -74,8 +76,16 @@
 %%    [msw(init,once,s0),msw(out(s0),1,a),msw(tr(s0),1,s0),msw(out(s0),2,b),...]
 %%
 
+%%...pp_find_explanations(+Goals) where
+%%
+%%   Constructs explanation graphs for each goal in Goals and stores
+%%   them in memory.
+%%
+%%   Goals : list of goals
+%%
 $pp_find_explanations(Goals) :-
     $pp_expl_goals_all(Goals).
+
 
 $pp_expl_failure :-    
     $pp_trans_one_goal(failure,CompGoal),!,
