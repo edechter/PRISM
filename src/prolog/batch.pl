@@ -1,4 +1,4 @@
-%% -*- mode: php;-*-
+%% -*- mode: prolog;-*-
 main :- $pp_batch.
 
 $pp_batch_call(Goal) :-
