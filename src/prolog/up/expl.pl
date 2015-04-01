@@ -52,7 +52,7 @@
 %%    goal_id(observe(3,s0,a),8)
 %%    goal_id(observe(3,s1,a),10)
 %%    goal_id(observe(3,s2,a),15)
-%%    goal_id(trans(1,s0,_5b0400),3)
+%%    goal_id(trans(1,s0,_5b0x400),3)
 %%    goal_id(trans(2,s0,_5b0480),6)
 %%    goal_id(trans(2,s1,_5b04f0),13)
 %%
@@ -98,9 +98,13 @@ $pp_find_explanations(Goals) :-
 
 %..$pp_expl_goals_all(+Goals)
 %  
+%  Same as above.
 $pp_expl_goals_all(Goals) :-
     $pp_expl_goals(Goals).
 
+%..$pp_expl_goals(+Goals) :- 
+%
+%  Same as above.
 $pp_expl_goals([]) => true.
 $pp_expl_goals([Goal|Goals]) =>
     $pp_learn_message(MsgS,_,_,_),
@@ -113,9 +117,12 @@ $pp_expl_goals([Goal|Goals]) =>
 $pp_expl_goals(Goal) =>
     $pp_expl_one_goal(Goal).
 
+%..$pp_expl_one_goal(+Goal)
+% 
+%  Construct the explanation graph for a single goal. 
 $pp_expl_one_goal(msw(Sw,V)) :- !,
     $prism_expl_msw(Sw,V,_Id).
-$pp_expl_one_goal(failure) :- !,
+$pp_expl_one_goal(failure) :- !, 
     $pp_expl_failure.
 $pp_expl_one_goal(Goal) :-
     $pp_is_dummy_goal(Goal),!,
@@ -124,15 +131,22 @@ $pp_expl_one_goal(Goal) :-
     % FIXME: handling non-tabled probabilistic predicate is future work
     $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),$pp_expl_one_goal/1),
     ( 
+        % if the goal is ground, then we need to copy it so that we
+        % get new variables
         ground(Goal) -> 
             GoalCp = Goal
         ; 
         copy_term(Goal,GoalCp)
     ),
     ( 
+        % This goal will only succeed with GoalCp is a
+        % probabilitic. If it isn't, then we don't need to translate
+        % it, because we are not saving any part of it in the
+        % explanation graph.
         $pp_trans_one_goal(GoalCp,CompGoal) ->
             call(CompGoal)
         ; 
+        % If goal is not probabilistic (see above comment). 
         savecp(CP),
         Depth = 0,
         $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_)
