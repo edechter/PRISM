@@ -1,3 +1,4 @@
+%% -*- mode: php;-*-
 main :- $pp_batch.
 
 $pp_batch_call(Goal) :-
