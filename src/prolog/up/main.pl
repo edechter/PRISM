@@ -3,8 +3,8 @@
 %%----------------------------------------
 %%  Version and copyright statement
 
-$pp_version('2.1').
-$pp_copyright('PRISM 2.1, (C) Sato Lab, Tokyo Institute of Technology, September, 2012').
+$pp_version('2.2a').
+$pp_copyright('PRISM 2.2 alpha 1, (C) Sato Lab, Tokyo Institute of Technology, September, 2014').
 
 get_version(V)  :- $pp_version(V).
 print_version   :- $pp_version(V),     !, format("~w~n",[V]).

@@ -23,7 +23,13 @@ OBJS = graph.$(O)             \
        viterbi.$(O)           \
        hindsight.$(O)         \
        flags.$(O)             \
-       util.$(O)
+       feature.$(O)           \
+       crfviterbi.$(O)        \
+       util.$(O)              \
+       linear_eq.$(O)         \
+       lbfgs.$(O)             \
+       nonlinear_eq.$(O)      
+
 
 ##----------------------------------------------------------------------
 
@@ -44,6 +50,7 @@ UP_H   = up.h
 EM_H   = em.h
 VT_H   = vt.h
 MCMC_H = mcmc.h
+CRF_H  = crf_grd.h
 
 ##----------------------------------------------------------------------
 
@@ -70,5 +77,10 @@ graph_aux.$(O)    : $(BPX_H) $(ERR_H) $(UP_H) graph_aux.h
 flags.$(O)        : $(BPX_H) $(ERR_H) $(UP_H) flags.h
 util.$(O)         : $(BPX_H) $(ERR_H) $(UP_H) util.h
 error.$(O)        : $(BPX_H) $(ERR_H) $(UP_H)
+linear_eq.$(O)    : $(BPX_H) $(ERR_H) $(UP_H) linear_eq.h
+nonlinear_eq.$(O) : $(BPX_H) $(ERR_H) $(UP_H) nonlinear_eq.h
+lbfgs.$(O)        :
+
+
 
 ##----------------------------------------------------------------------

@@ -707,8 +707,9 @@ $pp_error_prism_flag_value(Flag,Value,
 %%----------------------------------------
 
 $pp_require_distribution(X,MsgID,Source) :-
+    get_prism_flag(error_on_invalid_distribution,F),
     ( $pp_test_distribution(X) -> true
-    ; $pp_raise_on_require([X],MsgID,Source,$pp_error_distribution)
+    ; F=off ;$pp_raise_on_require([X],MsgID,Source,$pp_error_distribution)
     ).
 
 % we do not check each element at this moment
@@ -860,6 +861,7 @@ $pp_require_fixed_size_hyperparameters(X,MsgID,Source) :-
 
 $pp_test_fixed_size_hyperparameters(X) :-
     ground(X),
+    get_prism_flag(crf_enable,F),F=on->$pp_test_numbers(X);
     $pp_test_non_negative_numbers(X).
 
 $pp_error_fixed_size_hyperparameters(X,Error) :-

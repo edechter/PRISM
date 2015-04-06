@@ -251,7 +251,7 @@ $print_call(Flag,Type,Call,Depth,CallNo,AR),
     $next_monitor_instruction(Type,Call,Depth,CallNo,AR).
 $print_call(Flag,Type,Call,Depth,CallNo,AR),
       Flag /\ 2'10000 =:= 2'10000 ?=> %skip
-    c_is_skip_ar(AR),!,
+    c_is_skip_call_no(AR),!,
     $real_print_call(Type,Call,Depth,CallNo),
     $next_monitor_instruction(Type,Call,Depth,CallNo,AR).
 $print_call(_Flag,_Type,_Call,_Depth,_AR,_CallNo) => true.
@@ -324,7 +324,7 @@ $get_until_return(_Command) =>
     $get_until_return(X).
 
 $switch_skip_off(AR):-
-    c_is_skip_ar(AR),!,
+    c_is_skip_call_no(AR),!,
     c_set_skip_ar(0),
     c_set_dg_flag(2'100). % creep
 $switch_skip_off(_) => true.
