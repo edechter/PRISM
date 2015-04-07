@@ -35,7 +35,12 @@ UP_OBJS   = up$(S)graph.$(O)            \
             up$(S)viterbi.$(O)          \
             up$(S)hindsight.$(O)        \
             up$(S)flags.$(O)            \
-            up$(S)util.$(O)
+            up$(S)feature.$(O)          \
+            up$(S)crfviterbi.$(O)       \
+            up$(S)util.$(O)             \
+            up$(S)linear_eq.$(O)        \
+            up$(S)lbfgs.$(O)            \
+            up$(S)nonlinear_eq.$(O)     
 
 MP_OBJS   = mp$(S)mp_core.$(O)          \
             mp$(S)mp_em_aux.$(O)        \
@@ -46,7 +51,6 @@ MP_OBJS   = mp$(S)mp_core.$(O)          \
             mp$(S)mp_preds.$(O)         \
             mp$(S)mp_sw.$(O)
 
-OBJS    = $(CORE_OBJS) $(UP_OBJS)
 
 ##----------------------------------------------------------------------
 
@@ -57,6 +61,8 @@ UP_DIR     = up
 MP_DIR     = mp
 
 SUBDIRS    = $(CORE_DIR) $(UP_DIR)
+
+OBJS    = $(CORE_OBJS) $(UP_OBJS) $(LAPACK_OBJS)
 
 ##----------------------------------------------------------------------
 

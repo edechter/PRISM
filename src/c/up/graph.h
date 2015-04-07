@@ -40,6 +40,8 @@ int pc_import_sorted_graph_gid_2(void);
 int pc_import_sorted_graph_paths_2(void);
 int pc_get_gnode_inside_2(void);
 int pc_get_gnode_outside_2(void);
+int pc_set_gnode_inside_2(void);
+int pc_set_gnode_outside_2(void);
 int pc_get_gnode_viterbi_2(void);
 int pc_get_snode_inside_2(void);
 int pc_get_snode_expectation_2(void);
@@ -54,6 +56,12 @@ void alloc_sorted_egraph(int);
 void initialize_egraph_index(void);
 int sort_one_egraph(int, int, int);
 int sort_egraphs(TERM);
+
+/*====================================================================*/
+
+int pc_import_occ_crf_switches_3(void);/*[D-PRISM]*/
+int sort_one_crf_egraph(int, int, int, int);/*[D-PRISM]*/
+int sort_crf_egraphs(TERM);/*[D-PRISM]*/
 
 /*====================================================================*/
 

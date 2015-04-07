@@ -124,6 +124,13 @@ $pp_message($msg(1505),error,"switch information does not exist -- {1}").
 $pp_message($msg(1506),error,"MCMC sampling has not been done").
 $pp_message($msg(1507),error,"invalid number of trials; positive integer expected -- {1}").
 
+% Errors in CRF
+$pp_message($msg(1600),error,"no feature function; fsw/3 undefined").
+$pp_message($msg(1601),error,"non-ground goal name -- {1}").
+$pp_message($msg(1602),error,"invalid goal argument; goal/2 expected -- {1}").
+$pp_message($msg(1603),error,"`failure' is not allowed in CRF learn -- {1}").
+$pp_message($msg(1604),error,"goal/1 to compute Z(goal) is not defined -- (1)").
+
 %%
 %% Errors related to built-ins for auxiliary operations
 %%
@@ -919,8 +926,9 @@ $pp_error_prism_flag_value(Flag,Value,
 %%----------------------------------------
 
 $pp_require_distribution(X,MsgID,Source) :-
+    get_prism_flag(error_on_invalid_distribution,F),
     ( $pp_test_distribution(X) -> true
-    ; $pp_raise_on_require([X],MsgID,Source,$pp_error_distribution)
+    ; F=off ;$pp_raise_on_require([X],MsgID,Source,$pp_error_distribution)
     ).
 
 % we do not check each element at this moment
@@ -1072,6 +1080,7 @@ $pp_require_fixed_size_hyperparameters(X,MsgID,Source) :-
 
 $pp_test_fixed_size_hyperparameters(X) :-
     ground(X),
+    get_prism_flag(crf_enable,F),F=on->$pp_test_numbers(X);
     $pp_test_non_negative_numbers(X).
 
 $pp_error_fixed_size_hyperparameters(X,Error) :-
@@ -1547,8 +1556,8 @@ $pp_format_message_term(Term) :-
 %%----------------------------------------
 %%  Version and copyright statement
 
-$pp_version('2.1').
-$pp_copyright('PRISM 2.1, (C) Sato Lab, Tokyo Institute of Technology, September, 2012').
+$pp_version('2.2a').
+$pp_copyright('PRISM 2.2 alpha 1, (C) Sato Lab, Tokyo Institute of Technology, September, 2014').
 
 get_version(V)  :- $pp_version(V).
 print_version   :- $pp_version(V),     !, format("~w~n",[V]).
@@ -1915,14 +1924,15 @@ set_sw(Sw) :- set_sw(Sw,default).
 set_sw(Sw,Dist) :-
     $pp_require_ground(Sw,$msg(0101),set_sw/2),
     $pp_require_switch_outcomes(Sw,$msg(0102),set_sw/2),
-    $pp_require_distribution(Dist,$msg(0200),set_sw/2),
+    (get_prism_flag(crf_enable,on) -> $pp_require_crf_params(Dist,$msg(0200),set_sw/2)
+       ;$pp_require_distribution(Dist,$msg(0200),set_sw/2)),
     $pp_set_sw(Sw,Dist).
 
 $pp_set_sw(Sw,Dist) :-
     ( $pd_fixed_parameters(Sw) -> $pp_raise_warning($msg(0109),[Sw])
     ; $pp_get_values(Sw,Values),
       length(Values,N),
-      expand_probs(Dist,N,Probs),
+      (get_prism_flag(crf_enable,on) -> expand_fprobs(Dist,N,Probs);expand_probs(Dist,N,Probs)),
       ( retract($pd_parameters(Sw,_,_)) -> true ; true),
       assert($pd_parameters(Sw,Values,Probs))
     ),!.
@@ -1946,7 +1956,8 @@ $pp_set_sw_list([Sw|Sws],Dist) :-
 fix_sw(Sw,Dist) :-
     $pp_require_ground(Sw,$msg(0101),fix_sw/2),
     $pp_require_switch_outcomes(Sw,$msg(0102),fix_sw/2),
-    $pp_require_distribution(Dist,$msg(0200),fix_sw/2),
+    (get_prism_flag(crf_enable,on) -> $pp_require_crf_params(Dist,$msg(0200),fix_sw/2)
+       ;$pp_require_distribution(Dist,$msg(0200),set_sw/2)),
     $pp_unfix_sw(Sw),
     $pp_set_sw(Sw,Dist),
     $pp_fix_sw(Sw),!.
@@ -2130,7 +2141,7 @@ $pp_expand_pseudo_counts(Caller,Spec,N,Alphas,Deltas) :-
     ),
     ( Mode = alpha ->
         Alphas = Hs,
-        ( $pp_test_positive_numbers(Alphas) -> true
+        ((get_prism_flag(crf_enable,on) -> $pp_test_numbers(Alphas);$pp_test_positive_numbers(Alphas)) -> true
         ; $pp_raise_domain_error($msg(0208),[Spec],[alphas,Spec],Caller)
         ),                                        % a bit dirty
         $pp_alpha_to_delta(Alphas,Deltas)
@@ -2758,8 +2769,9 @@ get_reg_sw_list(Sws) :-
 %%----------------------------------------
 
 alpha_to_delta(Alphas,Deltas) :-
-     $pp_require_non_negative_numbers(Alphas,$msg(0208),alpha_to_delta/2),
-     $pp_alpha_to_delta(Alphas,Deltas).
+    (get_prism_flag(crf_enable,on) -> $pp_require_numbers(Alphas,$msg(0208),alpha_to_delta/2)
+      ;$pp_require_non_negative_numbers(Alphas,$msg(0208),alpha_to_delta/2)),
+    $pp_alpha_to_delta(Alphas,Deltas).
 
 $pp_alpha_to_delta([],[]).
 $pp_alpha_to_delta([Alpha|Alphas],[Delta|Deltas]) :-
@@ -2767,8 +2779,9 @@ $pp_alpha_to_delta([Alpha|Alphas],[Delta|Deltas]) :-
      $pp_alpha_to_delta(Alphas,Deltas).
 
 delta_to_alpha(Deltas,Alphas) :-
-     $pp_require_non_negative_numbers(Deltas,$msg(0209),delta_to_alpha/2),
-     $pp_delta_to_alpha(Deltas,Alphas).
+    (get_prism_flag(crf_enable,on) -> $pp_require_numbers(Delta,$msg(0208),delta_to_alpha/2)
+      ;$pp_require_non_negative_numbers(Deltas,$msg(0209),delta_to_alpha/2)),
+    $pp_delta_to_alpha(Deltas,Alphas).
 
 $pp_delta_to_alpha([],[]).
 $pp_delta_to_alpha([Delta|Deltas],[Alpha|Alphas]) :-
@@ -4062,9 +4075,9 @@ $pp_compute_expls(Goal,GLabel,Expls,Decode,PrMode,T0) :-
     $pc_prism_goal_id_get(Goal,Gid),
     $pc_alloc_sort_egraph(Gid),
     cputime(T3),
-    ( PrMode == 0 -> true
-    ; $pp_export_sw_info,
-      $pc_compute_probf(PrMode)
+    (  PrMode == 0 -> true
+    ;  $pp_export_sw_info,
+       $pc_compute_probf(PrMode)
     ),
     cputime(T4),
     $pc_import_sorted_graph_size(Size),
@@ -4988,6 +5001,7 @@ $pp_viterbi_switches([node(_,[])|Nodes],Ys) :- !,
 $pp_viterbi_switches([node(_,[path(_,Xs)])|Nodes],Ys) :-
     append(Xs,Ys1,Ys),!,
     $pp_viterbi_switches(Nodes,Ys1).
+<<<<<<< HEAD
 free_energy([G], FreeEnergy, L0, L1, L2) :- 
     !,  free_energy(G, FreeEnergy, L0, L1, L2).
 free_energy([G|Gs], FreeEnergy, L0, L1, L2) :- 
@@ -5036,6 +5050,8 @@ $pp_compute_free_energy(Goal, FreeEnergy, L0, L1, L2) :-
 
     
     
+=======
+>>>>>>> 8361929c6ea197ebfdc8dde113757218d9a29cce
 %%%%
 %%%% Hindsight routine with C interface
 %%%%
@@ -6107,7 +6123,8 @@ $pp_normalize_ratio(Ratio,Probs) :-
 
 $pp_ratio_to_probs([],_,[]) :- !.
 $pp_ratio_to_probs([X|Xs],Denom,[Y|Ys]) :-
-    Y is X / Denom,!,
+    get_prism_flag(error_on_invalid_distribution,F),
+    (F=on->(Y is X / Denom);(Y is X)),!,
     $pp_ratio_to_probs(Xs,Denom,Ys).
 
 $pp_check_expanded_prob_size(List,N,Source) :-
@@ -7307,6 +7324,17 @@ $pp_prism_flag(verb,special($pp_check_verb),none,$pp_set_verb).
 $pp_prism_flag(viterbi_mode,enum([params,hparams,ml,vb]),ml,$none).
 $pp_prism_flag(warn,bool,off,$pc_set_warn).
 $pp_prism_flag(write_call_events,special($pp_check_write_call_events),all,$none).
+$pp_prism_flag(error_on_invalid_distribution,bool,on,$none).
+$pp_prism_flag(crf_enable,bool,on,$none).
+$pp_prism_flag(crf_annealing_weight,float(1,+inf),1.0,$pc_set_annealing_weight).
+$pp_prism_flag(crf_learning_rate,enum([none,annealing,backtrack,golden]),backtrack,$pc_set_crf_learning_rate).
+$pp_prism_flag(crf_golden_b,float(@0,+inf),1.0,$pc_set_crf_golden_b).
+$pp_prism_flag(crf_epsilon,float(0,+inf),1.0,$pc_set_crf_epsilon).
+$pp_prism_flag(crf_init,enum([none,noisy_u,random,zero]),zero,$pc_set_crf_init_method).
+$pp_prism_flag(crf_learn_mode,enum([fg,lbfgs]),fg,$pc_set_crf_learn_mode).
+$pp_prism_flag(crf_ls_rho,float(@0,@1),0.5,$pc_set_crf_ls_rho).
+$pp_prism_flag(crf_ls_c1,float(@0,@1),0.5,$pc_set_crf_ls_c1).
+$pp_prism_flag(crf_penalty,float(-inf,+inf),0.0,$pc_set_crf_penalty).
 
 % first flag is enabled by default
 $pp_prism_flag_exclusive([default_sw_d,default_sw_a]).
@@ -8614,6 +8642,1070 @@ $pp_format_if(Flag,Format,Args) :-
     ( Flag == 0 -> true
     ; format(Format,Args)
     ),!.
+%%--------------------------
+
+$pp_require_crf_params(X,MsgID,Source) :-
+    ( $pp_test_crf_params(X) -> true
+    ; $pp_raise_on_require([X],MsgID,Source,$pp_error_distribution)
+    ).
+
+$pp_test_crf_params(X) :-
+    ( $pp_test_fixed_size_crf_params(X)
+    ; $pp_test_variable_size_distribution(X)
+    ).
+
+$pp_test_fixed_size_crf_params(X) :-
+    ground(X),
+    ( $pp_test_numbers(X)
+    ; $pp_test_crf_params_plus(X)
+    ; $pp_test_ratio(X)
+    ).
+
+$pp_test_crf_params_plus(X) :-
+    $pp_expr_to_list('+',X,Ps),
+    length(Ps,L),
+    L > 1,!,
+    $pp_test_probabilities(Ps).
+
+%%--------------------------
+
+expand_fprobs(Dist,N,Probs) :-
+    $pp_expand_fprobs(Dist,N,Probs,expand_fprobs/3).
+
+$pp_expand_fprobs(Dist,N,Probs,Source) :-
+    $pp_require_crf_params(Dist,$msg(0200),Source),
+    $pp_require_positive_integer(N,$msg(0204),Source),
+    $pp_spec_to_ratio(Dist,N,Ratio,Source),
+    $pp_check_expanded_prob_size(Ratio,N,Source),
+    $pp_normalize_ratio_crf(Dist,Ratio,Probs).
+
+$pp_normalize_ratio_crf(Dist,Ratio,Probs) :-
+    ( Dist = [_|_] -> Probs = Ratio
+    ; Dist = (_+_) -> Probs = Ratio
+    ; $pp_normalize_ratio(Ratio,Probs)
+    ).
+
+%%-------------------------
+
+set_sw_w(Sw) :- set_sw_a(Sw).
+set_sw_w(Sw,Spec) :- set_sw_a(Sw,Spec).
+
+set_sw_all_w :- set_sw_all_a.
+set_sw_all_w(Sw) :- set_sw_all_a(Sw).
+
+set_sw_w_all          :- set_sw_all_w.
+set_sw_w_all(Sw)      :- set_sw_all_w(Sw).
+set_sw_w_all(Sw,Spec) :- set_sw_all_w(Sw,Spec).
+
+show_sw_w :- show_sw_a.
+show_sw_w(Sw) :- show_sw_a(Sw).
+crf_learn(Gs):- call($pp_crflearn_core(Gs)).
+
+$pp_crflearn_check_goals(Goals) :-
+    $pp_require_observed_data(Goals,$msg(1302),$pp_crflearn_core/1),
+    $pp_crflearn_check_goals1(Goals).
+
+$pp_crflearn_check_goals1([]).
+$pp_crflearn_check_goals1([G0|Gs]) :-
+    ( (G0 = goal(G,Count) ; G0 = count(G,Count) ; G0 = (Count times G) ) ->
+        $pp_require_positive_integer(Count,$msg(1306),$pp_crflearn_core/1)
+    ; G = G0
+    ),
+    $pp_require_tabled_probabilistic_atom(G,$msg(1303),$pp_crflearn_core/1),!,
+    $pp_crflearn_check_goals1(Gs).
+
+$pp_crflearn_core(Goals) :-
+    $pp_crflearn_check_goals(Goals),
+    $pp_learn_message(MsgS,MsgE,MsgT,MsgM),
+    $pc_set_em_message(MsgE),
+    cputime(Start),
+    $pp_clean_crflearn_info,
+    $pp_trans_crf_goals(Goals,Table,GoalCountPairs,AllGoals),
+    $pp_trans_crf_countpairs(GoalCountPairs,GoalCountPairs1),
+    global_set($pg_observed_facts,GoalCountPairs1),
+    cputime(StartExpl),
+    global_set($pg_num_goals,0),
+    $pp_find_explanations(AllGoals),!,
+    $pp_print_num_goals(MsgS),
+    cputime(EndExpl),
+    statistics(table,[TableSpace,_]),
+    $pp_format_if(MsgM,"Exporting switch information to the CRF-learn routine ... "),
+    flush_output,
+    $pp_export_sw_info,
+    $pp_format_if(MsgM,"done~n"),
+    $pp_crf_observed_facts(GoalCountPairs,GidCountPairs,Table,
+                       0,Len,0,NGoals,-1,FailRootIndex),
+    $pp_check_failure_in_crflearn(Goals,FailRootIndex,crflearn/1),
+    $pc_crf_prepare(GidCountPairs,Len,NGoals,FailRootIndex),
+    cputime(StartGrd),
+    $pp_grd(Output),
+    cputime(EndGrd),
+    $pc_import_occ_crf_switches(NewSws,NSwitches,NSwVals),
+    $pp_decode_update_switches(ml,NewSws),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    cputime(End),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_crf_learn_stats(Output,NSwitches,NSwVals,TableSpace,
+                           Start,End,StartExpl,EndExpl,StartGrd,EndGrd,1000),
+    $pp_print_learn_stats_message(MsgT),
+    $pp_print_crf_learn_end_message(MsgM),!.
+
+$pp_print_crf_learn_end_message(Msg) :-
+    ( Msg == 0 -> true
+    ; format("Type show_sw to show the lambdas.~n",[])
+    ).
+
+$pp_grd(Output):-
+    $pc_prism_grd(Iterate,Likelihood),
+    Output = [Iterate,Likelihood].
+
+$pp_clean_crflearn_info :-
+    $pp_clean_dummy_goal_table,
+    $pp_clean_graph_stats,
+    $pp_clean_learn_stats,
+    $pp_init_tables_aux,
+    $pp_init_tables_if_necessary,!.
+
+$pp_assert_crf_learn_stats(Output,NSwitches,NSwVals,TableSpace,
+                       Start,End,StartExpl,EndExpl,StartEM,EndEM,UnitsPerSec) :-
+    assertz($ps_num_switches(NSwitches)),
+    assertz($ps_num_switch_values(NSwVals)),
+    ( integer(TableSpace) -> assertz($ps_learn_table_space(TableSpace)) ; true ),
+    Time is (End - Start) / UnitsPerSec,
+    assertz($ps_learn_time(Time)),
+    TimeExpl is (EndExpl - StartExpl) / UnitsPerSec,
+    assertz($ps_learn_search_time(TimeExpl)),
+    TimeEM is (EndEM - StartEM) / UnitsPerSec,
+    assertz($ps_em_time(TimeEM)),
+    Output = [Iterate,Likelihood],
+    assertz($ps_num_iterations(Iterate)),
+    assertz($ps_log_likelihood(Likelihood)),!.
+
+$pp_trans_crf_countpairs([],[]).
+$pp_trans_crf_countpairs([goal(Goal,Count,_PGidx)|GoalCountPairs],GoalCountPairs1):-
+    GoalCountPairs1 = [goal(Goal,Count)|GoalCountPairs0],!,
+    $pp_trans_crf_countpairs(GoalCountPairs,GoalCountPairs0).
+
+$pp_trans_crf_goals(Goals,ParentTable,GoalCountPairs,AllGoals) :-
+    $pp_build_crf_count_pairs(Goals,Pairs,ParentPairs),
+    new_hashtable(PCountTable),
+    $pp_trans_crf_count_pairs(Pairs,GoalCountPairs0,PCountTable,AllGoals0),
+    new_hashtable(ParentTable),
+    $pp_trans_crf_parent_count_pairs(ParentPairs,PCountTable,ParentTable,PGoalCountPairs,AllGoals1),
+    append(GoalCountPairs0,PGoalCountPairs,GoalCountPairs),
+    append(AllGoals0,AllGoals1,AllGoals).
+
+$pp_build_crf_count_pairs(Goals,Pairs,ParentPairs) :-
+    new_hashtable(Table),
+    new_hashtable(Table2),
+    $pp_count_crf_goals(Goals,Table,Table2,0),
+    hashtable_to_list(Table,Pairs0),
+    hashtable_to_list(Table2,ParentPairs0),
+    sort(Pairs0,Pairs),
+    sort(ParentPairs0,ParentPairs).
+
+$pp_count_crf_goals([],_,_,_).
+$pp_count_crf_goals([G0|Goals],Table,Table2,N) :-
+    ( G0 = goal(Goal,Count)  -> true
+    ; G0 = count(Goal,Count) -> true
+    ; G0 = (Count times Goal) -> true
+    ; Goal = G0, Count = 1
+    ),
+    $pp_require_ground(Goal,$msg(1601),$pp_crflearn_core),
+    ( $pp_hashtable_get(Table,Goal,(Count0,Pid)) ->
+        Count1 is Count0 + Count,
+        $pp_hashtable_put(Table,Goal,(Count1,Pid)),
+        N1 = N
+    ; $pp_build_parent_goal(Goal,ParentGoal0),
+        copy_term(ParentGoal0,ParentGoal),
+        ( $pp_hashtable_get(Table2,ParentGoal,Pid) ->
+            $pp_hashtable_put(Table,Goal,(Count,Pid)),N1 = N
+        ; N1 is N + 1,
+            $pp_hashtable_put(Table2,ParentGoal,N),
+            $pp_hashtable_put(Table,Goal,(Count,N))
+        )
+    ),!,
+    $pp_count_crf_goals(Goals,Table,Table2,N1).
+
+$pp_build_parent_goal(Goal,ParentGoal) :-
+    ( Goal =.. [F,X,_] -> ParentGoal =.. [F,X]
+    ; $pp_raise_runtime_error($msg(1602),Goal,$pp_crf_learn_core)
+    ),
+    $pp_require_tabled_probabilistic_atom(ParentGoal,$msg(1604),$pp_crf_learn_core).
+
+$pp_trans_crf_count_pairs([],[],_,[]).
+$pp_trans_crf_count_pairs([Goal=(Count,PGidx)|Pairs],GoalCountPairs,PCountTable,AllGoals) :-
+    $pp_build_dummy_goal(Goal,DummyGoal),
+    GoalCountPairs = [goal(DummyGoal,Count,PGidx)|GoalCountPairs1],
+    AllGoals = [DummyGoal|AllGoals1],
+    ( $pp_hashtable_get(PCountTable,PGidx,Count0) ->
+        Count1 is Count0 + Count,
+        $pp_hashtable_put(PCountTable,PGidx,Count1)
+    ; $pp_hashtable_put(PCountTable,PGidx,Count)
+    ),!,
+    $pp_trans_crf_count_pairs(Pairs,GoalCountPairs1,PCountTable,AllGoals1).
+
+$pp_trans_crf_parent_count_pairs([],_,_,[],[]).
+$pp_trans_crf_parent_count_pairs([PGoal=PGidx|ParentPairs],PCountTable,Table,PGoalCountPairs,AllGoals) :-
+    $pp_build_dummy_goal(PGoal,DummyGoal),
+    $pp_hashtable_put(Table,PGidx,DummyGoal),
+    $pp_hashtable_get(PCountTable,PGidx,Count),
+    PGoalCountPairs = [goal(DummyGoal,Count,-1)|PGoalCountPairs1],
+    AllGoals = [DummyGoal|AllGoals1],!,
+    $pp_trans_crf_parent_count_pairs(ParentPairs,PCountTable,Table,PGoalCountPairs1,AllGoals1).
+
+$pp_crf_observed_facts([],[],_Table,Len,Len,NGoals,NGoals,FailRootIndex,FailRootIndex).
+$pp_crf_observed_facts([goal(Goal,Count,PGidx)|GoalCountPairs],GidCountPairs,Table,
+                   Len0,Len,NGoals0,NGoals,FailRootIndex0,FailRootIndex) :-
+    % fails if the goal is ground but has no proof
+    ( $pc_prism_goal_id_get(Goal,Gid) ->
+        ( Goal == failure ->
+            NGoals1 = NGoals0,
+            FailRootIndex1 = Len0
+        ; NGoals1 is NGoals0 + Count,
+          FailRootIndex1 = FailRootIndex0
+        ),
+        ( $pp_hashtable_get(Table,PGidx,PGoal) ->
+            $pc_prism_goal_id_get(PGoal,PGid)
+        ; PGid = PGidx
+        ),
+        GidCountPairs = [goal(Gid,Count,PGid)|GidCountPairs1],
+        Len1 is Len0 + 1
+    ; $pp_raise_unexpected_failure($pp_crf_observed_facts/8)
+    ),!,
+    $pp_crf_observed_facts(GoalCountPairs,GidCountPairs1,Table,
+                       Len1,Len,NGoals1,NGoals,FailRootIndex1,FailRootIndex).
+
+$pp_check_failure_in_crflearn(Gs,FailRootIndex,Source) :-
+    ( FailRootIndex >= 0 ->
+        $pp_raise_runtime_error($msg(1603),[Gs],failure_in_crf_learn,Source)
+    ; true
+    ).
+%%%% CRF-Viterbi wrappers
+
+crf_viterbi(G) :-
+    $pp_crfviterbi_wrapper(crf_viterbi(G)).
+crf_viterbi(G,P) :-
+    $pp_crfviterbi_wrapper(crf_viterbi(G,P)).
+crf_viterbif(G) :-
+    $pp_crfviterbi_wrapper(crf_viterbif(G)).
+crf_viterbif(G,P,V) :-
+    $pp_crfviterbi_wrapper(crf_viterbif(G,P,V)).
+crf_viterbit(G) :-
+    $pp_crfviterbi_wrapper(crf_viterbit(G)).
+crf_viterbit(G,P,T) :-
+    $pp_crfviterbi_wrapper(crf_viterbit(G,P,T)).
+n_crf_viterbi(N,G) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbi(N,G)).
+n_crf_viterbi(N,G,P) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbi(N,G,P)).
+n_crf_viterbif(N,G) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbif(N,G)).
+n_crf_viterbif(N,G,V) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbif(N,G,V)).
+n_crf_viterbit(N,G) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbit(N,G)).
+n_crf_viterbit(N,G,T) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbit(N,G,T)).
+crf_viterbig(G) :-
+    $pp_crfviterbi_wrapper(crf_viterbig(G)).
+crf_viterbig(G,P) :-
+    $pp_crfviterbi_wrapper(crf_viterbig(G,P)).
+crf_viterbig(G,P,V) :-
+    $pp_crfviterbi_wrapper(crf_viterbig(G,P,V)).
+n_crf_viterbig(N,G) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbig(N,G)).
+n_crf_viterbig(N,G,P) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbig(N,G,P)).
+n_crf_viterbig(N,G,P,V) :-
+    $pp_crfviterbi_wrapper(n_crf_viterbig(N,G,P,V)).
+
+$pp_crfviterbi_wrapper(Pred0) :-
+    Suffix = '_p',
+    Pred0 =.. [Name0|Args],
+    atom_concat(Name0,Suffix,Name1),
+    Pred1 =.. [Name1|Args],!,
+    call(Pred1).  % do not add cut here (n_viterbig is non-deterministic)
+
+%%%% Viterbi routine with C interface
+%%
+%% viterbi_p(G) :- print the Viterbi prob
+%% viterbi_p(G,P) :- output the Viterbi prob
+%% viterbif_p(G) :- print the Viterbi path and the Viterbi prob
+%% viterbif_p(G,P,VPath) :- output the Viterbi path and the Viterbi prob
+%%
+%% VPath is a list of node(G,Paths), where Paths is a list of
+%% path(Gs,Sws), where Gs are subgoals of G and Sws are switches.
+%%
+%% Usually in VPath, node(msw(Sw,V),[]) is omitted, but optionally
+%% it can be included in VPath.
+
+% Main routine:
+
+% viterbi family:
+
+crf_viterbi_p(Goal) :-
+    crf_viterbif_p(Goal,Pmax,_),
+    $pp_print_crfviterbi_prob(Pmax).
+
+crf_viterbi_p(Goal,Pmax) :-
+    crf_viterbif_p(Goal,Pmax,_).
+
+% viterbif family:
+
+crf_viterbif_p(Goal) :-
+    crf_viterbif_p(Goal,Pmax,VNodeL),
+    format("~n",[]),
+    print_graph(VNodeL,[lr('<=')]),
+    $pp_print_crfviterbi_prob(Pmax).
+
+crf_viterbif_p(Goal,Pmax,VNodeL) :-
+    $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),viterbif_p/3),
+    ( Goal = msw(I,_) ->
+        $pp_require_ground(I,$msg(0101),viterbif_p/3),
+        $pp_require_switch_outcomes(I,$msg(0102),viterbif_p/3)
+    ; true
+    ),
+    $pp_crfviterbif_p(Goal,Pmax,VNodeL).
+
+$pp_crfviterbif_p(Goal,Pmax,VNodeL) :-
+    $pp_clean_infer_stats,
+    cputime(T0),
+    $pp_crfviterbi_core(Goal,Pmax,VNodeL),
+    cputime(T1),
+    $pp_garbage_collect,
+    InfTime is T1 - T0,
+    $pp_assert_viterbi_stats1(InfTime),!.
+
+% viterbit family:
+
+crf_viterbit_p(Goal) :-
+    crf_viterbit_p(Goal,Pmax,VTreeL),
+    format("~n",[]),
+    print_tree(VTreeL),
+    $pp_print_crfviterbi_prob(Pmax).
+
+crf_viterbit_p(Goal,Pmax,VTreeL) :-
+    $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),viterbit_p/3),
+    $pp_crfviterbif_p(Goal,Pmax,VNodeL),
+    viterbi_tree(VNodeL,VTreeL).
+
+% viterbig family:
+
+crf_viterbig_p(Goal) :-
+    ( ground(Goal) -> crf_viterbi_p(Goal)
+    ; crf_viterbig_p(Goal,_,_)
+    ).
+
+crf_viterbig_p(Goal,Pmax) :-
+    ( ground(Goal) -> crf_viterbi_p(Goal,Pmax)
+    ; crf_viterbig_p(Goal,Pmax,_)
+    ).
+
+crf_viterbig_p(Goal,Pmax,VNodeL) :-
+    $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),viterbig_p/3),
+    ( Goal = msw(I,_) ->
+        $pp_require_ground(I,$msg(0101),viterbif_p/3),
+        $pp_require_switch_outcomes(I,$msg(0102),viterbig_p/3)
+    ; true
+    ),
+    $pp_crfviterbig_p(Goal,Pmax,VNodeL).
+
+$pp_crfviterbig_p(Goal,Pmax,VNodeL) :-
+    $pp_clean_infer_stats,
+    cputime(T0),
+    $pp_crfviterbi_core(Goal,Pmax,VNodeL),
+    ( ground(Goal) -> true
+    ; VNodeL = [node(_,[path([Goal1],[])])|_] -> Goal = Goal1
+    ; VNodeL = [node(_,[path([],[SwIns])])|_] -> Goal = SwIns
+    ),
+    cputime(T1),
+    InfTime is T1 - T0,
+    $pp_garbage_collect,
+    $pp_assert_viterbi_stats1(InfTime),!.
+
+%% Common routine:
+
+$pp_print_crfviterbi_prob(Pmax) :-
+    format("~nCRF-Viterbi weight = ~15f~n",[Pmax]).
+
+$pp_crfviterbi_core(Goal,Pmax,VNodeL) :-
+    Goal = msw(I,V),!,
+    $pp_require_ground(I,$msg(0101),$pp_viterbi_core/3),
+    $pp_require_switch_outcomes(I,$msg(0102),$pp_viterbi_core/3),
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    ( ground(V) -> V = VCp ; copy_term(V,VCp) ),
+    $pp_create_dummy_goal(DummyGoal),
+    DummyBody = ($prism_expl_msw(I,VCp,Sid),
+                 $pc_prism_goal_id_register(DummyGoal,Hid),
+                 $prism_eg_path(Hid,[],[Sid])),
+    Prog = [pred(DummyGoal,0,_,_,tabled(_,_,_,_),[(DummyGoal:-DummyBody)])],
+    $pp_consult_preds_cond([],Prog),!,
+    cputime(T1),
+    $pp_find_explanations(DummyGoal),
+    cputime(T2),
+    $pp_compute_crfviterbi_p(DummyGoal,Pmax,[node(DummyGoal,Paths)|VNodeL0]),!,
+    cputime(T3),
+    VNodeL = [node(msw(I,V),Paths)|VNodeL0],
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_viterbi_stats2(SearchTime,NumCompTime),!.
+
+$pp_crfviterbi_core(Goal,Pmax,VNodeL) :-
+    ground(Goal),!,
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    cputime(T1),
+    $pp_find_explanations(Goal),
+    cputime(T2),
+    $pp_compute_crfviterbi_p(Goal,Pmax,VNodeL),!,
+    cputime(T3),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_viterbi_stats2(SearchTime,NumCompTime),!.
+
+$pp_crfviterbi_core(Goal,Pmax,VNodeL) :-
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    copy_term(Goal,GoalCp),
+    ( $pp_trans_one_goal(GoalCp,CompGoal) -> BodyGoal = CompGoal
+    ; BodyGoal = (savecp(CP),Depth=0,
+                  $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_))
+    ),
+    $pp_create_dummy_goal(DummyGoal),
+    DummyBody = (BodyGoal,
+                 $pc_prism_goal_id_register(GoalCp,GId),
+                 $pc_prism_goal_id_register(DummyGoal,HId),
+                 $prism_eg_path(HId,[GId],[])),
+    Prog = [pred(DummyGoal,0,_Mode,_Delay,tabled(_,_,_,_),
+                 [(DummyGoal:-DummyBody)])],
+    $pp_consult_preds_cond([],Prog),!,
+    cputime(T1),
+    $pp_find_explanations(DummyGoal),
+    cputime(T2),
+    $pp_compute_crfviterbi_p(DummyGoal,Pmax,[node(DummyGoal,Paths)|VNodeL0]),!,
+    cputime(T3),
+    VNodeL = [node(Goal,Paths)|VNodeL0],
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_viterbi_stats2(SearchTime,NumCompTime),!.
+
+% Sws = [sw(Id,Instances,Probs,PseudoCs,Fixed,FixedH),...]
+$pp_compute_crfviterbi_p(Goal,Pmax,VNodeL) :-
+    $pp_export_sw_info,
+    $pc_prism_goal_id_get(Goal,Gid),
+    $pc_compute_crfviterbi(Gid,EGs,EGPaths,ESwPaths,Pmax),
+    $pp_decode_viterbi_path(EGs,EGPaths,ESwPaths,VNodeL),!.
+
+%%%%
+%%%%  Top-N Viterbi
+%%%%
+%%%% n_viterbi_p(N,G) :- print the top-N Viterbi probs
+%%%% n_viterbi_p(N,G,Ps) :- output the top-N Viterbi probs
+%%%% n_viterbif_p(N,G) :- print the top-N Viterbi paths and the corresponding
+%%%%                     Viterbi probs
+%%%% n_viterbif_p(N,G,VPathL) :- output the list of top-N Viterbi paths and
+%%%%                            the corresponding Viterbi probs
+%%%%
+
+% n_viterbi family
+
+n_crf_viterbi_p(N,Goal) :-
+    n_crf_viterbif_p(N,Goal,VPathL),
+    ( member(v_expl(J,Pmax,_),VPathL),
+      $pp_print_n_crfviterbi(J,Pmax),
+      fail
+    ; true
+    ).
+
+n_crf_viterbi_p(N,Goal,Ps) :-
+    n_crf_viterbif_p(N,Goal,VPathL),!,
+    findall(Pmax,member(v_expl(_,Pmax,_),VPathL),Ps).
+
+% n_viterbif family
+
+n_crf_viterbif_p(N,Goal) :-
+    n_crf_viterbif_p(N,Goal,VPathL),!,
+    $pp_print_n_crfviterbif(VPathL).
+
+n_crf_viterbif_p(N,Goal,VPathL) :-
+    $pp_require_positive_integer(N,$msg(1400),n_viterbif_p/3),
+    $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),n_viterbif_p/3),
+    $pp_n_crfviterbif_p(N,Goal,VPathL).
+
+$pp_n_crfviterbif_p(N,Goal,VPathL) :-
+    $pp_clean_infer_stats,
+    cputime(T0),
+    $pp_n_crfviterbi_p_core(N,Goal,VPathL),
+    cputime(T1),
+    InfTime is T1 - T0,
+    $pp_garbage_collect,
+    $pp_assert_viterbi_stats1(InfTime),!.
+
+% n_viterbit family
+
+n_crf_viterbit_p(N,Goal) :-
+    n_crf_viterbif_p(N,Goal,VPathL),!,
+    $pp_print_n_crfviterbit(VPathL).
+
+n_crf_viterbit_p(N,Goal,VPathL) :-
+    n_crf_viterbif_p(N,Goal,VPathL0),!,
+    $pp_build_n_viterbit(VPathL0,VPathL).
+
+%%%% 
+%%%% $pp_n_viterbig_p(N,Goal) :- the same as $pp_n_viterbig_p(N,Goal,_,_)
+%%%% $pp_n_viterbig_p(N,Goal,Pmax) :- the same as $pp_n_viterbig_p(N,Goal,Pmax,_)
+%%%% $pp_n_viterbig_p(N,Goal,Pmax,VNodeL) :-
+%%%%      if Goal is not ground, unify Goal with the first element in the K-th
+%%%%      Viterbi path VNodeL (K=0,1,2,...,(N-1) on backtracking). Pmax is the
+%%%%      probability of VNodeL.
+%%%%
+
+n_crf_viterbig_p(N,Goal) :-
+    ( ground(Goal) -> n_crf_viterbi_p(N,Goal)
+    ; n_crf_viterbig_p(N,Goal,_,_)
+    ).
+
+n_crf_viterbig_p(N,Goal,Pmax) :-
+    ( ground(Goal) -> n_crf_viterbi_p(N,Goal,Ps),!,member(Pmax,Ps)
+    ; n_crf_viterbig_p(N,Goal,Pmax,_)
+    ).
+
+n_crf_viterbig_p(N,Goal,Pmax,VNodeL) :-
+    $pp_require_positive_integer(N,$msg(1400),n_viterbi_p/3),
+    $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),n_viterbi_p/3),
+    $pp_n_crfviterbig_p(N,Goal,Pmax,VNodeL).
+
+$pp_n_crfviterbig_p(N,Goal,Pmax,VNodeL) :-
+    $pp_clean_infer_stats,
+    cputime(T0),
+    $pp_n_crfviterbi_p_core(N,Goal,VPathL),!,
+    cputime(T1),
+    InfTime is T1 - T0,
+    $pp_garbage_collect,
+    $pp_assert_viterbi_stats1(InfTime),!,
+    ( ground(Goal) -> member(v_expl(J,Pmax,VNodeL),VPathL)
+    ; Goal = msw(_,_) ->
+        member(v_expl(J,Pmax,VNodeL),VPathL),
+        VNodeL = [node(_,[path([],[SwIns])])|_],
+        Goal = SwIns
+    ; % else
+        member(v_expl(J,Pmax,VNodeL),VPathL),
+        VNodeL = [node(_,[path([Goal1],[])])|_],
+        Goal = Goal1
+    ).
+
+%% Common routines:
+
+$pp_print_n_crfviterbi(J,Pmax) :-
+      format("#~w: CRF-Viterbi weight = ~15f~n",[J,Pmax]).
+
+$pp_print_n_crfviterbif([]).
+$pp_print_n_crfviterbif([v_expl(J,Pmax,VNodeL)|VPathL]) :-
+    format("~n#~w~n",[J]),
+    print_graph(VNodeL,[lr('<=')]),
+    format("~nCRF-Viterbi weight = ~15f~n",[Pmax]),!,
+    $pp_print_n_crfviterbif(VPathL).
+
+$pp_print_n_crfviterbit([]).
+$pp_print_n_crfviterbit([v_expl(J,Pmax,VNodeL)|VPathL]) :-
+    format("~n#~w~n",[J]),
+    viterbi_tree(VNodeL,VTreeL),
+    print_tree(VTreeL),
+    $pp_print_crfviterbi_prob(Pmax),!,
+    $pp_print_n_crfviterbit(VPathL).
+
+$pp_n_crfviterbi_p_core(N,Goal,VPathL) :-
+    Goal = msw(I,V),!,
+    $pp_require_ground(I,$msg(0101),$pp_n_viterbi_p_core/3),
+    $pp_require_switch_outcomes(I,$msg(0102),$pp_n_viterbi_p_core/3),
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    ( ground(V) -> V = VCp ; copy_term(V,VCp) ),
+    $pp_create_dummy_goal(DummyGoal),
+    DummyBody = ($prism_expl_msw(I,VCp,Sid),
+                 $pc_prism_goal_id_register(DummyGoal,Hid),
+                 $prism_eg_path(Hid,[],[Sid])),
+    Prog = [pred(DummyGoal,0,_Mode,_Delay,tabled(_,_,_,_),
+                 [(DummyGoal:-DummyBody)])],
+    $pp_consult_preds_cond([],Prog),!,
+    cputime(T1),
+    $pp_find_explanations(DummyGoal),
+    cputime(T2),
+    $pp_compute_n_crfviterbi_p(N,DummyGoal,VPathL0),!,
+    cputime(T3),
+    $pp_replace_dummy_goal(Goal,DummyGoal,VPathL0,VPathL),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_viterbi_stats2(SearchTime,NumCompTime),!.
+
+$pp_n_crfviterbi_p_core(N,Goal,VPathL) :-
+    ground(Goal),!,
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    cputime(T1),
+    $pp_find_explanations(Goal),
+    cputime(T2),
+    $pp_compute_n_crfviterbi_p(N,Goal,VPathL),!,
+    cputime(T3),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_viterbi_stats2(SearchTime,NumCompTime),!.
+
+$pp_n_crfviterbi_p_core(N,Goal,VPathL) :-
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    copy_term(Goal,GoalCp),
+    ( $pp_trans_one_goal(GoalCp,CompGoal) -> BodyGoal = CompGoal
+    ; BodyGoal = (savecp(CP),Depth=0,
+                  $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_))
+    ),
+    $pp_create_dummy_goal(DummyGoal),
+    DummyBody = (BodyGoal,
+                 $pc_prism_goal_id_register(GoalCp,GId),
+                 $pc_prism_goal_id_register(DummyGoal,HId),
+                 $prism_eg_path(HId,[GId],[])),
+    Prog = [pred(DummyGoal,0,_Mode,_Delay,tabled(_,_,_,_),
+                 [(DummyGoal:-DummyBody)])],
+    $pp_consult_preds_cond([],Prog),!,
+    cputime(T1),
+    $pp_find_explanations(DummyGoal),
+    cputime(T2),
+    $pp_compute_n_crfviterbi_p(N,DummyGoal,VPathL0),!,
+    cputime(T3),
+    $pp_replace_dummy_goal(Goal,DummyGoal,VPathL0,VPathL),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_viterbi_stats2(SearchTime,NumCompTime),!.
+
+$pp_compute_n_crfviterbi_p(N,Goal,VPathL) :-
+    $pp_export_sw_info,!,
+    $pc_prism_goal_id_get(Goal,Gid),
+    $pc_compute_n_crfviterbi(N,Gid,VPathL0),
+    $pp_build_n_viterbi_path(VPathL0,VPathL),!.
+%%%%
+%%%% Hindsight routine with C interface
+%%%%
+
+%%
+%% hindsight(G,SubG,HProbs) :-
+%%   output hindsight probs of subgoals that matches with SubG given G
+%%
+%% hindsight(G,SubG) :- print hindsight probs of SubG given G
+%%
+
+crf_hindsight(G) :- crf_hindsight(G,_).
+
+crf_hindsight(G,SubG) :-
+    crf_hindsight(G,SubG,HProbs),
+    ( HProbs == [] -> $pp_raise_warning($msg(1404))
+    ; format("hindsight weights:~n",[]),
+      $pp_print_hindsight_probs(HProbs)
+    ).
+
+crf_hindsight(G,SubG,HProbs) :-
+    $pp_require_tabled_probabilistic_atom(G,$msg(0006),hindsight/3),
+    ( nonvar(SubG) -> $pp_require_callable(SubG,$msg(1403),hindsight/3)
+    ; true
+    ),
+    $pp_clean_infer_stats,
+    cputime(T0),
+    $pp_crfhindsight_core(G,SubG,HProbs0),
+    $pp_sort_hindsight_probs(HProbs0,HProbs),
+    cputime(T1),
+    InfTime is T1 - T0,
+    $pp_garbage_collect,
+    $pp_assert_hindsight_stats1(InfTime),!.
+
+$pp_crfhindsight_core(G,SubG,HProbs) :-
+    ground(G),!,
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    cputime(T0),
+    $pp_find_explanations(G),!,
+    cputime(T1),
+    $pp_compute_crfhindsight(G,SubG,HProbs),
+    cputime(T2),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T1 - T0,
+    NumCompTime is T2 - T1,
+    $pp_assert_hindsight_stats2(SearchTime,NumCompTime),!.
+
+$pp_crfhindsight_core(G,SubG,HProbs) :-
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    copy_term(G,GoalCp),
+    ( $pp_trans_one_goal(GoalCp,CompGoal) -> BodyGoal = CompGoal
+    ; BodyGoal = (savecp(CP),Depth=0,
+                  $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_))
+    ),
+    $pp_create_dummy_goal(DummyGoal),
+    Clause = (DummyGoal:-BodyGoal,
+                         $pc_prism_goal_id_register(GoalCp,GId),
+                         $pc_prism_goal_id_register(DummyGoal,HId),
+                         $prism_eg_path(HId,[GId],[])),
+    Prog = [pred(DummyGoal,0,_Mode,_Delay,tabled(_,_,_,_),[Clause]),
+            pred('$damon_load',0,_,_,_,[('$damon_load':-true)])],
+    $pp_consult_preds_cond([],Prog),!,
+    cputime(T0),
+    $pp_find_explanations(DummyGoal),!,
+    cputime(T1),
+    $pp_compute_crfhindsight(DummyGoal,SubG,HProbs),
+    cputime(T2),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T1 - T0,
+    NumCompTime is T2 - T1,
+    $pp_assert_hindsight_stats2(SearchTime,NumCompTime),!.
+
+% Sws = [sw(Id,Instances,Probs,PseudoCs,Fixed,FixedH),...]
+$pp_compute_crfhindsight(Goal,SubG,HProbs) :-
+    $pp_export_sw_info,
+    $pc_prism_goal_id_get(Goal,Gid),
+    $pc_compute_crfhindsight(Gid,SubG,0,HProbs0), % "0" indicates "unconditional"
+    $pp_decode_hindsight(HProbs0,HProbs),!.
+%
+crf_prob(Goal) :-
+    fprob(Goal,P),
+    ( $pp_in_log_scale -> Text = 'Log-weight' ; Text = 'Weight' ),
+    format("~w of ~w is: ~15f~n",[Text,Goal,P]).
+
+crf_prob(Goal,Prob) :-
+    $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),prob/2),
+    $pp_fprob(Goal,Prob).
+
+$pp_fprob(msw(Sw,V),Prob) :-
+    $pp_require_ground(Sw,$msg(0101),prob/2),
+    $pp_require_switch_outcomes(Sw,$msg(0102),prob/2),
+    $pp_clean_infer_stats,
+    ( var(V) ->
+        cputime(T0),
+        ( $pp_in_log_scale -> Prob = 0.0 ; Prob = 1.0 ),
+        cputime(T1),
+        InfTime is T1 - T0,
+        $pp_assert_prob_stats1(InfTime)
+    ; % else
+        cputime(T0),
+        $pp_get_value_prob(Sw,V,Prob0),
+        ( $pp_in_log_scale -> Prob is log(Prob0) ; Prob = Prob0 ),
+        cputime(T1),
+        InfTime is T1 - T0,
+        $pp_assert_prob_stats1(InfTime)
+    ),
+    $pp_assert_prob_stats2(0.0,0.0),!.
+
+$pp_fprob(Goal,Prob) :-
+    $pp_clean_infer_stats,
+    cputime(T0),
+    $pp_fprob_core(Goal,Prob),
+    cputime(T1),
+    InfTime is T1 - T0,
+    $pp_assert_prob_stats1(InfTime),!.
+
+log_crf_prob(Goal) :-
+    log_fprob(Goal,P),format("Log-weight of ~w is: ~15f~n",[Goal,P]).
+log_crf_prob(Goal,P) :-
+    $pp_fprob(Goal,P0),( $pp_in_log_scale -> P = P0 ; P is log(P0) ).
+
+$pp_fprob_core(Goal,Prob) :-
+    ground(Goal),
+    $pp_is_tabled_probabilistic_atom(Goal),!,
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    cputime(T1),
+    $pp_find_explanations(Goal),
+    cputime(T2),
+    $pp_compute_inside_feature(Goal,Prob),!,
+    cputime(T3),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_prob_stats2(SearchTime,NumCompTime),!.
+
+$pp_fprob_core(Goal,Prob) :-
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    copy_term(Goal,GoalCp),
+    ( $pp_trans_one_goal(GoalCp,CompGoal) -> BodyGoal = CompGoal
+    ; BodyGoal = (savecp(CP),Depth=0,
+                  $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_))
+    ),
+    $pp_create_dummy_goal(DummyGoal),
+    Clause = (DummyGoal:-BodyGoal,
+                         $pc_prism_goal_id_register(GoalCp,GId),
+                         $pc_prism_goal_id_register(DummyGoal,HId),
+                         $prism_eg_path(HId,[GId],[])),
+    Prog = [pred(DummyGoal,0,_Mode,_Delay,tabled(_,_,_,_),[Clause])],
+    $pp_consult_preds_cond([],Prog),!,
+    cputime(T1),
+    $pp_find_explanations(DummyGoal),
+    cputime(T2),
+    $pp_compute_inside_feature(DummyGoal,Prob),
+    cputime(T3),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    SearchTime  is T2 - T1,
+    NumCompTime is T3 - T2,
+    $pp_assert_prob_stats2(SearchTime,NumCompTime),!.
+
+% Sws = [sw(Id,Instances,Probs,Deltas,FixedP,FixedH),...]
+$pp_compute_inside_feature(Goal,Prob) :-
+    $pp_export_sw_info,
+    $pc_prism_goal_id_get(Goal,Gid),
+    $pc_compute_feature(Gid,Prob),!.
+
+crf_probf(Goal) :-
+    $pp_fprobf(Goal,Expls,1,0), \+ \+ print_graph(Expls,[lr('<=>')]).
+crf_probfi(Goal) :-
+    $pp_fprobf(Goal,Expls,1,1), \+ \+ print_graph(Expls,[lr('<=>')]).
+crf_probfo(Goal) :-
+    $pp_fprobf(Goal,Expls,1,2), \+ \+ print_graph(Expls,[lr('<=>')]).
+crf_probfio(Goal) :-
+    $pp_fprobf(Goal,Expls,1,4), \+ \+ print_graph(Expls,[lr('<=>')]).
+
+crf_probf(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,1,0).
+crf_probfi(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,1,1).
+crf_probfo(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,1,2).
+crf_probfio(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,1,4).
+
+crf_probef(Goal) :-
+    $pp_fprobf(Goal,Expls,0,0), \+ \+ print_graph(Expls,[lr('<=>')]).
+crf_probefi(Goal) :-
+    $pp_fprobf(Goal,Expls,0,1), \+ \+ print_graph(Expls,[lr('<=>')]).
+crf_probefo(Goal) :-
+    $pp_fprobf(Goal,Expls,0,2), \+ \+ print_graph(Expls,[lr('<=>')]).
+crf_probefio(Goal) :-
+    $pp_fprobf(Goal,Expls,0,4), \+ \+ print_graph(Expls,[lr('<=>')]).
+
+crf_probef(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,0,0).
+crf_probefi(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,0,1).
+crf_probefo(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,0,2).
+crf_probefio(Goal,Expls) :-
+    $pp_fprobf(Goal,Expls,0,4).
+
+crf_probef(Goal,Expls,GoalHashTab,SwHashTab) :-
+    $pp_fprobf(Goal,Expls,0,0),
+    $pp_get_subgoal_hashtable(GoalHashTab),
+    $pp_get_switch_hashtable(SwHashTab).
+crf_probefi(Goal,Expls,GoalHashTab,SwHashTab) :-
+    $pp_fprobf(Goal,Expls,0,1),
+    $pp_get_subgoal_hashtable(GoalHashTab),
+    $pp_get_switch_hashtable(SwHashTab).
+crf_probefo(Goal,Expls,GoalHashTab,SwHashTab) :-
+    $pp_fprobf(Goal,Expls,0,2),
+    $pp_get_subgoal_hashtable(GoalHashTab),
+    $pp_get_switch_hashtable(SwHashTab).
+crf_probefio(Goal,Expls,GoalHashTab,SwHashTab) :-
+    $pp_fprobf(Goal,Expls,0,4),
+    $pp_get_subgoal_hashtable(GoalHashTab),
+    $pp_get_switch_hashtable(SwHashTab).
+
+%% PrMode is one of 0 (none), 1 (inside + feature)
+
+$pp_fprobf(Goal,Expls,Decode,PrMode) :-
+    $pp_require_tabled_probabilistic_atom(Goal,$msg(0006),$pp_fprobf/4),
+    $pp_compute_expls_feature(Goal,Expls,Decode,PrMode),
+    $pp_garbage_collect.
+
+$pp_compute_expls_feature(Goal,Expls,Decode,PrMode) :-
+    Goal = msw(I,V),!,
+    $pp_require_ground(I,$msg(0101),$pp_fprobf/4),
+    $pp_require_switch_outcomes(I,$msg(0102),$pp_fprobf/4),
+    $pp_clean_infer_stats,
+    ( ground(V) -> V = VCp ; copy_term(V,VCp) ),
+    $pp_create_dummy_goal(DummyGoal),
+    DummyBody = ($prism_expl_msw(I,VCp,Sid),
+                 $pc_prism_goal_id_register(DummyGoal,Hid),
+                 $prism_eg_path(Hid,[],[Sid])),
+    Prog = [pred(DummyGoal,0,_,_,tabled(_,_,_,_),[(DummyGoal:-DummyBody)])],
+    $pp_consult_preds_cond([],Prog),
+    cputime(T0),
+    $pp_compute_expls_feature(DummyGoal,Goal,Expls,Decode,PrMode,T0),!.
+
+$pp_compute_expls_feature(Goal,Expls,Decode,PrMode) :-
+    $pp_is_tabled_probabilistic_atom(Goal),
+    ground(Goal),!,
+    $pp_clean_infer_stats,
+    cputime(T0),
+    $pp_compute_expls_feature(Goal,_,Expls,Decode,PrMode,T0),!.
+
+$pp_compute_expls_feature(Goal,Expls,Decode,PrMode) :-
+    $pp_clean_infer_stats,
+    copy_term(Goal,GoalCp),
+    ( $pp_trans_one_goal(GoalCp,CompGoal) ->
+      BodyGoal = CompGoal
+    ; BodyGoal = (savecp(CP),Depth=0,
+                  $pp_expl_interp_goal(GoalCp,Depth,CP,[],_,[],_,[],_,[],_))
+    ),
+    $pp_create_dummy_goal(DummyGoal),
+    DummyBody = (BodyGoal,
+                 $pc_prism_goal_id_register(GoalCp,GId),
+                 $pc_prism_goal_id_register(DummyGoal,HId),
+                 $prism_eg_path(HId,[GId],[])),
+    Prog = [pred(DummyGoal,0,_,_,tabled(_,_,_,_),[(DummyGoal:-DummyBody)])],
+    $pp_consult_preds_cond([],Prog),
+    cputime(T0),
+    $pp_compute_expls_feature(DummyGoal,Goal,Expls,Decode,PrMode,T0),!.
+
+$pp_compute_expls_feature(Goal,GLabel,Expls,Decode,PrMode,T0) :-
+    $pp_init_tables_aux,
+    $pp_clean_graph_stats,
+    $pp_init_tables_if_necessary,!,
+    cputime(T1),
+    $pp_find_explanations(Goal),
+    cputime(T2),
+    $pc_prism_goal_id_get(Goal,Gid),
+    $pc_alloc_sort_egraph(Gid),
+    cputime(T3),
+    ( $pp_export_sw_info,
+      $pc_compute_fprobf(PrMode)
+    ),
+    cputime(T4),
+    $pc_import_sorted_graph_size(Size),
+    $pp_build_expls_feature(Size,Decode,PrMode,GLabel,Expls),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    cputime(T5),
+    SearchTime  is T2 - T1,
+    NumCompTime is T4 - T3,
+    InfTime     is T5 - T0,
+    $pp_assert_prob_stats2(SearchTime,NumCompTime),
+    $pp_assert_prob_stats1(InfTime),!.
+
+$pp_build_expls_feature(I0,_,_,_,Expls), I0 =< 0 =>
+    Expls = [].
+$pp_build_expls_feature(I0,Decode,PrMode,GLabel,Expls), I0 > 0 =>
+    I is I0 - 1,
+    $pc_import_sorted_graph_gid(I,Gid),
+    $pc_import_sorted_graph_paths(I,Paths0),
+    ( Decode == 0    -> Label = Gid
+    ; nonvar(GLabel) -> Label = GLabel
+    ; $pc_prism_goal_term(Gid,Label)
+    ),
+    ( PrMode == 0 -> Node = node(Label,Paths)  % fprobf
+    ; PrMode == 4 ->                           % fprobfio
+        $pp_get_gnode_probs(PrMode,Gid,Value),
+        Node = node(Label,Paths,Value),
+        Value = [_,Vo]
+    ; $pp_get_gnode_probs(PrMode,Gid,Value), % fprobfi,fprobfo
+      Node  = node(Label,Paths,Value),
+      Value = Vo % ??
+    ),
+    $pp_decode_paths_feature(Paths0,Paths,Decode,PrMode,Vo),
+    Expls = [Node|Expls1],!,
+    $pp_build_expls_feature(I,Decode,PrMode,_,Expls1).
+
+$pp_decode_paths_feature([],[],_Decode,_PrMode,_Vo).
+$pp_decode_paths_feature([Pair|Pairs],[Path|Paths],Decode,PrMode,Vo) :-
+    Pair = [Gids,Sids],
+    $pp_decode_gnodes_feature(Gids,GNodes,Decode,PrMode,Vg),
+    $pp_decode_snodes_feature(Sids,SNodes,Decode,PrMode,Vs),
+    get_prism_flag(log_scale,LogScale),
+    ( PrMode == 0 ->
+        Path = path(GNodes,SNodes)
+    ; PrMode == 1 -> ( LogScale == on -> Vi is Vg + Vs ; Vi is Vg * Vs),
+        Path = path(GNodes,SNodes,Vi)
+    ; PrMode == 2 ->
+        Path = path(GNodes,SNodes,Vo)
+    ; PrMode == 4 -> ( LogScale == on -> Vi is Vg + Vs ; Vi is Vg * Vs),
+        Path = path(GNodes,SNodes,[Vi,Vo])
+    ),!,
+    $pp_decode_paths_feature(Pairs,Paths,Decode,PrMode,Vo).
+
+$pp_decode_gnodes_feature(Gids,GNodes,Decode,PrMode,V) :-
+    get_prism_flag(log_scale,LogScale),
+    ( LogScale == on -> V0 = 0.0 ; V0 = 1.0 ),
+    $pp_decode_gnodes_feature(Gids,GNodes,Decode,PrMode,LogScale,V0,V).
+
+$pp_decode_gnodes_feature([],[],_Decode,_PrMode,_LogScale,V,V) :- !.
+$pp_decode_gnodes_feature([Gid|Gids],[GNode|GNodes],Decode,PrMode,LogScale,V0,V) :-
+    ( Decode == 0 -> Gid = Label
+    ; $pc_prism_goal_term(Gid,Label)
+    ),
+    ( PrMode == 0 -> GNode = Label
+    ; $pp_get_gnode_probs(PrMode,Gid,Value),
+      GNode = gnode(Label,Value),
+      ( LogScale == on ->
+        V1 is Value + V0
+      ; V1 is Value * V0
+      )
+    ),!,
+    $pp_decode_gnodes_feature(Gids,GNodes,Decode,PrMode,LogScale,V1,V).
+
+$pp_decode_snodes_feature(Sids,SNodes,Decode,PrMode,V) :-
+    get_prism_flag(log_scale,LogScale),
+    ( LogScale == on -> V0 = 0.0 ; V0 = 1.0 ),
+    $pp_decode_snodes_feature(Sids,SNodes,Decode,PrMode,LogScale,V0,V).
+
+$pp_decode_snodes_feature([],[],_Decode,_PrMode,_LogScale,V,V) :- !.
+$pp_decode_snodes_feature([Sid|Sids],[SNode|SNodes],Decode,PrMode,LogScale,V0,V) :-
+    ( Decode == 0 -> Sid = Label
+    ; $pc_prism_sw_ins_term(Sid,Label)
+    ),
+    ( PrMode == 0 -> SNode = Label
+    ; PrMode == 1 ->
+        $pp_get_snode_feature(PrMode,Sid,[Pi,F]),
+        SNode = snode(Label,[Pi,F]),
+        ( LogScale == on ->
+          V1 is Pi * F + V0
+        ; V1 is exp(Pi * F) * V0
+        )
+    ; PrMode == 4 ->
+        $pp_get_snode_feature(PrMode,Sid,[PiF,E]),
+        SNode = snode(Label,[PiF1,E]),
+        ( LogScale = on ->
+          V1 is PiF + V0,PiF1 = PiF
+        ; V1 is exp(PiF) * V0,PiF1 is exp(PiF)
+        )
+    ; $pp_get_snode_feature(PrMode,Sid,Value),
+        SNode = snode(Label,Value),
+        ( LogScale == on ->
+          V1 is Value + V0
+        ; V1 is Value * V0
+        )
+    ),!,
+    $pp_decode_snodes_feature(Sids,SNodes,Decode,PrMode,LogScale,V1,V).
+
+$pp_get_snode_feature(1,Sid,[Pi,F]) :-
+    $pc_get_snode_feature(Sid,F,Pi),!.
+$pp_get_snode_feature(2,Sid,E) :-
+    $pc_get_snode_expectation(Sid,E),!.
+$pp_get_snode_feature(4,Sid,[PiF,E]) :-
+    $pc_get_snode_feature(Sid,F,Pi),
+    PiF is Pi * F,
+    $pc_get_snode_expectation(Sid,E),!.
 %%%%
 %%%%  bigarray.pl -- A large one-dimensional array for B-Prolog
 %%%%
@@ -8919,6 +10011,12 @@ $pp_trans_values([pred(F,3,_,_,_,Cls0)|Preds0],
     $pp_trans_values_demon_clauses(Cls0,Cls1,DemonAux),
     append(Cls1,ValCls1,ValCls),!,
     $pp_trans_values(Preds0,Preds,ValCls1,Demon,_).
+$pp_trans_values([pred(F,4,_,_,_,Cls0)|Preds0],
+                 Preds,ValCls,Demon,DemonAux) :-
+    (F = values ; F = values_x),!,
+    $pp_trans_values_demon_clauses_4(Cls0,Cls1,DemonAux),
+    append(Cls1,ValCls1,ValCls),!,
+    $pp_trans_values(Preds0,Preds,ValCls1,Demon,_).
 $pp_trans_values([pred($damon_load,0,_,_,_,[($damon_load:-Demon)|_])|Preds0],
                  Preds,ValCls,Demon,DemonAux) :- !,
     $pp_trans_values(Preds0,Preds,ValCls,_,DemonAux).
@@ -8929,6 +10027,26 @@ $pp_trans_values_clauses([],[]).
 $pp_trans_values_clauses([Cl0|Cls0],[Cl|Cls]) :-
     $pp_trans_values_one_clause(Cl0,Cl),!,
     $pp_trans_values_clauses(Cls0,Cls).
+
+/*for D-PRISM*/
+$pp_trans_values_demon_clauses_4([],[],true).
+$pp_trans_values_demon_clauses_4([Cl0|Cls0],[Cl|Cls],Demon) :-
+      ( Cl0 = (values(Sw,Vals0,Demons,Demons0):-Body)   -> true
+      ; Cl0 = (values_x(Sw,Vals0,Demons,Demons0):-Body) -> true
+      ; Cl0 = values(Sw,Vals0,Demons,Demons0)           -> Body = true
+      ; Cl0 = values_x(Sw,Vals0,Demons,Demons0)         -> Body = true
+      ),
+      $pp_build_expand_values(Vals0,Vals,Expand),
+      Cl = ($pu_values(Sw,Vals):-Body,Expand),
+      ( ground(Sw),ground(Demons)
+          -> $pp_trans_values_demons(Sw,Demons,Demon1), Demon = (Demon1,Demon2)
+      ; $pp_raise_warning($msg(1104),[Sw,Demons]), Demon = Demon2
+      ),
+      ( ground(Demons0)
+          -> $pp_trans_values_demons(Sw,Demons0,Demon0), Demon2 = (Demon0,Demon3)
+      ; $pp_raise_warning($msg(1104),[Sw,Demons0]), Demon = Demon3
+      ),!,
+      $pp_trans_values_demon_clauses(Cls0,Cls,Demon3).
 
 $pp_trans_values_one_clause(Cl0,Cl) :-
     ( Cl0 = (values(Sw,Vals0):-Body)   -> true
@@ -8971,6 +10089,8 @@ $pp_trans_values_demons(Sw,Demon0,Demon) :-
     ; Demon0 = fix_d@HParams -> Demon = $query(fix_sw_d(Sw,HParams))
     ; Demon0 = fix_h@HParams -> Demon = $query(fix_sw_d(Sw,HParams))
     ; Demon0 = Params        -> Demon = $query(set_sw(Sw,Params))
+    ; Demon0 = set_l@Lambdas -> Demon = $query(set_sw(Sw,Lambdas))
+    ; Demon0 = set_w@Weights -> Demon = $query(set_sw_a(Sw,Weights))
     ).
 
 $pp_build_expand_values(Vals0,Vals,Expand) :-
@@ -9247,7 +10367,12 @@ $pp_trans_prob_cls([(Head0:-Body0)|Cls0],Cls,F,Tabled,Info) =>
     ((nonvar(Tabled),Tabled = tabled(_,_,_,_)) ->
         Head =.. [F,Gid0|Args],
         $pp_trans_prob_body(Body0,Body1,Gids,[],Sids,[],Info),
-        RegistPath = $prism_eg_path(Gid0,Gids,Sids),
+        (get_prism_flag(crf_enable,on) ->
+          ( Gids == [], Sids == [] -> RegistPath = true
+          ; RegistPath = $prism_eg_path(Gid0,Gids,Sids)
+          )
+        ;RegistPath = $prism_eg_path(Gid0,Gids,Sids)
+        ),
         Body = (Body1,
                 $pc_prism_goal_id_register(Head0,Gid0),
                 RegistPath)
@@ -10128,7 +11253,7 @@ $print_call(Flag,Type,Call,Depth,CallNo,AR),
     $next_monitor_instruction(Type,Call,Depth,CallNo,AR).
 $print_call(Flag,Type,Call,Depth,CallNo,AR),
       Flag /\ 2'10000 =:= 2'10000 ?=> %skip
-    c_is_skip_ar(AR),!,
+    c_is_skip_call_no(AR),!,
     $real_print_call(Type,Call,Depth,CallNo),
     $next_monitor_instruction(Type,Call,Depth,CallNo,AR).
 $print_call(_Flag,_Type,_Call,_Depth,_AR,_CallNo) => true.
@@ -10201,7 +11326,7 @@ $get_until_return(_Command) =>
     $get_until_return(X).
 
 $switch_skip_off(AR):-
-    c_is_skip_ar(AR),!,
+    c_is_skip_call_no(AR),!,
     c_set_skip_ar(0),
     c_set_dg_flag(2'100). % creep
 $switch_skip_off(_) => true.
@@ -10261,3 +11386,406 @@ nospy:-
 
 trace(Call) =>
     $trace_call(Call).
+$prprobg(Goal):-
+    (get_prism_flag(log_scale,on)->Text='Log-probability';Text='Probability'),
+    prprobg(Goal,L),
+    foreach(S in L,[G,P],
+    ([P,G]=S,format("~w of ~w is: ~15f~n",[Text,G,P]))).
+
+$prprobg(Goal,Probs):-
+    vars_set(Goal,Vars),
+    probf(Goal,N),
+    N=[node(_,Z)|_],
+    foreach(S in Z,ac(Ps,[]),[P,G|Vars],
+    (S=path([G],[]),Goal=G->prprob(G,P),Ps^1=[[P,G]|Ps^0];true)),
+	sort(>,Ps,Probs).
+$probg(Goal,Probs):-
+    vars_set(Goal,Vars),
+    probf(Goal,N),
+    N=[node(_,Z)|_],
+    foreach(S in Z,ac(Ps,[]),[P,G|Vars],
+    (S=path([G],[]),Goal=G->prob(G,P),Ps^1=[[P,G]|Ps^0];true)),
+	sort(>,Ps,Probs).
+
+
+lin_prob(Goal) :-
+  lin_prob(Goal,P),
+  (get_prism_flag(log_scale,on)->Text='Log-probability';Text='Probability'),
+  format("~w of ~w is: ~15f~n",[Text,Goal,P]).
+
+find_scc(Goal,Components,CompT) :-
+  % Testing goal
+  probefi(Goal,ExpGraph),
+  % Transforming graph
+  $pp_trans_graph(ExpGraph,HGraph,_,_),
+  % Finding SCC
+  $pp_find_scc(HGraph,Components,CompT).
+
+lin_prob(Goal,Prob) :-
+  % Testing goal
+  probefi(Goal,ExpGraph),
+  % Transforming graph
+  $pp_trans_graph(ExpGraph,HGraph,_,_),
+  % Finding SCC
+  $pp_find_scc(HGraph,Components,CompTable),
+  % Solving graph
+  $pp_solve_graph(HGraph,Components,CompTable,ProbTable),
+  bigarray_get(ProbTable,1,Prob),!.
+
+
+
+lin_probfi(Goal):-
+  lin_probfi(Goal,Expls),print_graph(Expls,[lr('<=>')]).
+lin_probefi(Goal):-
+  lin_probefi(Goal,Expls),print_graph(Expls,[lr('<=>')]).
+
+lin_probfi(Goal,Expls) :-
+  $pp_cyc_probfi(Goal,_,1,Expls).
+lin_probefi(Goal,Expls) :-
+  $pp_cyc_probfi(Goal,_,0,Expls).
+
+$pp_cyc_replace_prob(Id,Mapping,P):-
+  !,(X=(Id,P),member(X,Mapping)),!.
+
+$pp_cyc_probfi(Goal,OrgExpls,Decode,NewExpls2) :-
+  % Testing goal
+  (Decode=0->probefi(Goal,OrgExpls);probfi(Goal,OrgExpls)),
+  % Transforming graph
+  $pp_trans_graph(OrgExpls,HGraph,_,_),
+  % Finding SCC
+  $pp_find_scc(HGraph,Components,CompTable),
+  % Solving graph
+  $pp_solve_graph(HGraph,Components,CompTable,ProbTable),
+  bigarray_length(ProbTable,Size),
+  % Creating mapping from ProbTableIndex to NodeID
+  %new_bigarray(Mapping,Size),
+  %foreach((E,I) in (OrgExpls,1..Size),[Id,T1,T2],
+  %  (E=node(Id,T1,T2),bigarray_put(Mapping,I,Id))),
+  % Creating mapping ProbTableIndex and NodeID
+  Src @= [Index : Index in 1..Size],
+  maplist(I,Ex,Pair,(
+      bigarray_get(ProbTable,I,Temp),
+      Ex=node(Id,_,_),
+      %bigarray_get(Mapping,I,Index2),
+      Pair=(Id,Temp)
+    ),Src,OrgExpls,IMapping),!,
+  $pc_import_sorted_graph_size(ESize),
+  % Replacing probabilities
+  maplist(E,NewExpl,(E=node(Id,Paths,P),
+  maplist(Path,NewPath,(Path=path(GNodes,SNodes,PP),
+  maplist(GNode,NewGNode,(GNode=gnode(GID,GP),$pp_cyc_replace_prob(GID,IMapping,NewGP),NewGNode=gnode(GID,NewGP)),GNodes,NewGNodes)
+  ,NewPath=path(NewGNodes,SNodes,PP)),Paths,NewPaths)
+  ,$pp_cyc_replace_prob(Id,IMapping,NewP),NewExpl = node(Id, NewPaths ,NewP) ),OrgExpls,NewExpls),
+  % TODO:Re-calculate path-probabilities
+  get_prism_flag(log_scale,LogScale),
+  %( LogScale == on -> Vi is Vg + Vs ; Vi is Vg * Vs),
+  maplist(E,NewExpl,(E=node(Id,Paths,P),
+  maplist(Path,NewPath,(Path=path(GNodes,SNodes,PP),
+  maplist(GNode,GP,(GNode=gnode(GID,GP)),GNodes,GNodeProbs),
+  maplist(SNode,SP,(SNode=snode(SID,SP)),SNodes,SNodeProbs),
+  ( LogScale == on -> (
+    reducelist(Y0,X,Y1,(Y1 is Y0+X),GNodeProbs,0.0,TempP),
+    reducelist(Y0,X,Y1,(Y1 is Y0+X),SNodeProbs,TempP,PathP)
+  );(
+    reducelist(Y0,X,Y1,(Y1 is Y0*X),GNodeProbs,1.0,TempP),
+    reducelist(Y0,X,Y1,(Y1 is Y0*X),SNodeProbs,TempP,PathP)
+  )),
+  NewPath=path(GNodes,SNodes,PathP)),Paths,NewPaths)
+  ,NewExpl = node(Id, NewPaths ,P) ),NewExpls,NewExpls2),
+  %
+  $pp_garbage_collect.
+
+
+$cyc_learn(Goals) :-
+$pp_cyc_learn_core(ml,Goals).
+
+$pp_cyc_learn_core(Mode,Goals) :-
+    $pp_learn_check_goals(Goals),
+    $pp_learn_message(MsgS,MsgE,MsgT,MsgM),
+    $pc_set_em_message(MsgE),
+    cputime(Start),
+    $pp_clean_learn_info,
+    $pp_learn_reset_hparams(Mode),
+    $pp_trans_goals(Goals,GoalCountPairs,AllGoals),!,
+    global_set($pg_observed_facts,GoalCountPairs),
+    cputime(StartExpl),
+    global_set($pg_num_goals,0),
+    $pp_find_explanations(AllGoals),!,
+    $pp_print_num_goals(MsgS),
+    cputime(EndExpl),
+    statistics(table,[TableSpace,_]),
+    $pp_format_if(MsgM,"Exporting switch information to the EM routine ... "),
+    flush_output,
+    $pp_export_sw_info,
+    $pp_format_if(MsgM,"done~n"),
+    format("~w\n",[GoalCountPairs,GidCountPairs,0,Len,0,NGoals,-1,FailRootIndex]),
+    $pp_observed_facts(GoalCountPairs,GidCountPairs,
+                       0,Len,0,NGoals,-1,FailRootIndex),
+    format("a"),
+    $pc_prism_prepare(GidCountPairs,Len,NGoals,FailRootIndex),
+    format("b"),
+    cputime(StartEM),
+    %%%$pp_em(Mode,Output),
+    $pp_cyc_em(Mode,Output),
+    %%%
+    cputime(EndEM),
+    $pc_import_occ_switches(NewSws,NSwitches,NSwVals),
+    $pp_decode_update_switches(Mode,NewSws),
+    $pc_import_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    cputime(End),
+    $pp_assert_graph_stats(NSubgraphs,NGoalNodes,NSwNodes,AvgShared),
+    $pp_assert_learn_stats(Mode,Output,NSwitches,NSwVals,TableSpace,
+                           Start,End,StartExpl,EndExpl,StartEM,EndEM,1000),
+    $pp_print_learn_stats_message(MsgT),
+    $pp_print_learn_end_message(MsgM,Mode),!.
+
+$pp_cyc_em(ml,Output) :-
+    format("c"),
+    $pc_cyc_em(Iterate,LogPost,LogLike,BIC,CS,ModeSmooth),
+    format("d"),
+    Output = [Iterate,LogPost,LogLike,BIC,CS,ModeSmooth].
+
+
+nonlin_prob_check(Goal) :-
+  nonlin_prob_m(1,Goal,P),
+  format("Probability is ~w\n",P).
+nonlin_prob_check(Goal,P) :-
+  nonlin_prob_m(1,Goal,P).
+
+nonlin_prob(Goal) :-
+  nonlin_prob_m(0,Goal,P),
+  format("Probability is ~w\n",P).
+nonlin_prob(Goal,P) :-
+  nonlin_prob_m(0,Goal,P).
+
+nonlin_prob_m(Mode,Goal) :-
+  nonlin_prob_m(Mode,Goal,P),
+  format("Probability is ~w\n",P).
+nonlin_prob_m(Mode,Goal,P) :-
+  probefi(Goal,_),
+  $pc_nonlinear_eq(Mode,P).
+
+
+
+% Transform the prism explanation graph into a hypergraph
+$pp_trans_graph(ExpGraph,HGraph,NodesId,ExpTableId) :- !,
+  length(ExpGraph,L),
+  new_bigarray(NodesAcc,L),
+  new_hashtable(NodesId,L),
+  new_bigarray(ExpTableId,L),
+  $pp_create_node_array(ExpGraph,1,NodesId,ExpTableId),
+  $pp_transform_graph(ExpGraph,HGraph,NodesAcc,NodesId).
+
+$pp_create_node_array([],_,_,_).
+$pp_create_node_array([node(H,_,_)|ExpGraph],I,NodesId,ExpTableId) :-
+  hashtable_register(NodesId,H,I),
+  bigarray_put(ExpTableId,I,H),
+  I1 is I + 1,
+  $pp_create_node_array(ExpGraph,I1,NodesId,ExpTableId).
+
+$pp_transform_graph([],HGraph,HGraph,_).
+% Traverse node H <=> B_1 + ... + B_n
+% where P(H) = P(B_1) + ... + P(B_n)
+$pp_transform_graph([node(H,Paths,_)|ExpGraph],HGraph,HGraphAcc,NodesId) :-
+% Traverse edges B_i = C_1 ^ ... ^ C_m ^ msw_1 ^ ... ^ msw_n
+% where P(B_i) = P(C_1)*...*P(C_m)*P(msw_1)*...*P(msw_n)
+  $pp_transform_edges(NodesId,Paths,Edges),
+  hashtable_get(NodesId,H,I),
+  bigarray_put(HGraphAcc,I,Edges),
+  $pp_transform_graph(ExpGraph,HGraph,HGraphAcc,NodesId).
+
+% Transform the paths into multiedges
+$pp_transform_edges(NodesId,Paths,Edges) :-
+  $pp_transform_edges(NodesId,Paths,Edges,[]).
+$pp_transform_edges(_,[],Edges,Edges).
+$pp_transform_edges(NodesId,[path(Nodes,Switches,_)|Paths],Edges,EdgesAcc) :-
+  % Get children of edge
+  Children @= [C : N in Nodes,[C,P,G],(N = gnode(G,P),hashtable_get(NodesId,G,C))],
+  % Accumulate probability from switches
+  % AccProb = P(msw_1)*...*P(msw_n)
+  ($pp_in_log_scale ->
+    foreach(snode(_,Prob) in Switches,ac(AccProb,0),(AccProb^1 is Prob + AccProb^0))
+    ;foreach(snode(_,Prob) in Switches,ac(AccProb,1),AccProb^1 is Prob * AccProb^0)
+  ),
+  $pp_transform_edges(NodesId,Paths,Edges,[edge(AccProb,Children)|EdgesAcc]).
+
+% Utility functions for manipulating the stack
+$pp_scc_pop_until_less([Id|P],CTarget,PreTable,[Id|P]) :-
+  bigarray_get(PreTable,Id,C),
+  C =< CTarget.
+$pp_scc_pop_until_less([_|P],CTarget,PreTable,P1) :-
+  $pp_scc_pop_until_less(P,CTarget,PreTable,P1).
+
+$pp_scc_pop_until_found(S,NTarget,S1,Popped) :-
+  $pp_scc_pop_until_found(S,NTarget,S1,Popped,[]).
+$pp_scc_pop_until_found([N|S],N,S,[N|Popped],Popped).
+$pp_scc_pop_until_found([N|S],NTarget,S1,Popped,PoppedAcc) :-
+  $pp_scc_pop_until_found(S,NTarget,S1,Popped,[N|PoppedAcc]).
+
+% Wrapper for finding strongly connected components
+$pp_find_scc(G,Components,CompTable) :-
+  % Initialize arrays
+  bigarray_length(G,Size),
+  new_bigarray(PreTable,Size),
+  new_bigarray(CompTable,Size),
+  % Call Gabow algorithm on each node
+  foreach(I in 1..Size,
+    [ac(S,[]),ac(P,[]),ac(C,1),ac(D,1),ac(Comp,[])],
+    $pp_find_scc(G,I,S^0,P^0,C^0,D^0,Comp^0,S^1,P^1,C^1,D^1,Comp^1,PreTable,CompTable)
+  ),
+  % Have components in topological ordering
+  reverse(Comp,Components).
+
+% Find strongly connected components using Gabow's algorithm 
+% G: Graph (array of outgoing edges for each node id)
+% N: Current node id
+% S: Stack of nodes that have not yet been assigned to a scc
+% P: Stack of nodes which have not yet been determined to belong to different scc
+% C: Counter for preorder number
+% D: Counter for component number
+% Comp: List of components found so far
+% PreTable: Table containing the preorder number for each node
+% CompTable: Table containing the component number for each node and the
+%   index number within that component
+$pp_find_scc(G,N,S0,P0,C0,D0,Comp0,S3,P3,C3,D3,Comp3,PreTable,CompTable) :-
+  ((bigarray_get(PreTable,N,C),nonvar(C)) ->
+    % Node already has a preorder number
+    ((bigarray_get(CompTable,N,Comp),nonvar(Comp)) ->
+      % Node has been assigned to a component, do nothing
+      P3 = P0
+    ; % Node has not been assigned to a component
+      % pop from P to collapse nodes until top element 
+      % has same or lower preorder number
+      $pp_scc_pop_until_less(P0,C,PreTable,P3)
+    ),
+    S3 = S0, C3 is C0, D3 is D0, Comp3 = Comp0
+  ; % Node has no preorder number
+    % Assigning new preorder number, pushing N on both stacks
+    bigarray_put(PreTable,N,C0),
+    S1 = [N|S0],
+    P1 = [N|P0],
+    C1 is C0 + 1,
+    % Traverse all children
+    bigarray_get(G,N,Edges),
+    foreach(edge(_,Children) in Edges, Child in Children,
+      [ac(C2,C1),ac(D2,D0),ac(S2,S1),ac(P2,P1),ac(Comp2,Comp0)],
+        $pp_find_scc(G,Child,S2^0,P2^0,C2^0,D2^0,Comp2^0,S2^1,P2^1,C2^1,D2^1,Comp2^1,PreTable,CompTable)
+    ),
+    ( P2 = [N|P3] ->
+      % N is top element of P, make new component
+      $pp_scc_pop_until_found(S2,N,S3,NewComp),
+      foreach(NodeId in NewComp, [ac(SubId,1)],
+        ( bigarray_put(CompTable,NodeId,(D2,SubId^0)), SubId^1 is SubId^0 + 1 )
+      ),
+      Comp3 = [NewComp|Comp2],
+      D3 is D2 + 1
+    ; % N is part of another component, simply continue
+      P3 = P2, S3 = S2, D3 is D2, Comp3 = Comp2
+    ), C3 = C2
+  ).
+
+% log scale mode use scaling for matrix calculous
+$pp_scaling_param(Scale):-Scale is 10000000.
+% solve system given by graph G, dividided into components
+% by creating linear equation systems and solving bottom up
+$pp_solve_graph(G,Components,CompTable,ProbTable) :-
+  bigarray_length(G,L),
+  new_bigarray(ProbTable,L),
+  % Solve each component
+  foreach(Comp in Components,
+    $pp_solve_component(G,Comp,CompTable,ProbTable)).
+
+% Solve component by creating a linear system Ax = b
+$pp_solve_component(G,CompNodes,CompTable,ProbTable) :-
+  length(CompNodes,Length),
+  SizeA is Length * Length,
+  % Create matrix A and vector b
+  new_bigarray(A,SizeA),
+  new_bigarray(B,Length),
+  % Fill diagonal of A with 1 and rest with 0
+  foreach(I in 1..Length,
+    ( foreach(J in 1..Length, [IJ],
+      ( IJ is (I - 1) * Length + J,
+        ( I == J -> bigarray_put(A,IJ,-1)
+        ; bigarray_put(A,IJ,0)
+        )
+      )),
+      bigarray_put(B,I,0)
+    )
+  ),
+  % Iterate over nodes to fill A and b
+  foreach(Node in CompNodes,
+    $pp_update_linear_system(G,Node,CompTable,ProbTable,A,B,Length)
+  ),
+  % Solve linear system to x
+  ( Length == 1 -> % single value, solve directly
+    new_bigarray(X,1),
+    bigarray_get(A,1,AVal),
+    bigarray_get(B,1,BVal),
+    ( AVal =:= 0.0 -> % singular system, not solvable
+      $pp_raise_evaluation_error($msg(0200),['system not solvable'],non_solvable,$pp_solve_component/4)
+    ; ($pp_in_log_scale -> ($pp_scaling_param(Scale),Prob is -1* BVal / AVal);Prob is -1*BVal/AVal),
+      bigarray_put(X,1,Prob)
+    )
+  ; % Transform to list and call c interface for solving
+    bigarray_to_list(A,AList),
+    bigarray_to_list(B,BList),
+    ( $pc_solve_linear_system(Length, AList, BList, XList,0) ->
+      list_to_bigarray(XList, X)
+    ; $pp_raise_evaluation_error($msg(0200),['system not solvable'],non_solvable,$pp_solve_component/4)
+    )
+  ),
+  % Write probabilites
+  foreach(Node in CompNodes, [CompSubId,NodeProb,CompId,NP,Scale],
+    ( bigarray_get(CompTable,Node,(CompId,CompSubId)),
+      bigarray_get(X,CompSubId,NodeProb),
+      ($pp_in_log_scale->($pp_scaling_param(Scale),NP is log(NodeProb/Scale));NP is NodeProb),
+      bigarray_put(ProbTable,Node,NP) )
+  ).
+
+% Update linear system for a certain node by traversing all edges
+$pp_update_linear_system(G,Node,CompTable,ProbTable,A,B,Length) :-
+  bigarray_get(G,Node,Edges),
+  bigarray_get(CompTable,Node,(CompId,CompSubId)),
+  foreach(edge(EdgeProb,Children) in Edges,
+    [ProdProb,Dependants,DependantId,SumProb,TmpProb,Index,Scale],
+    ( foreach(Child in Children, [ac(ProdProb,EdgeProb),ac(Dependants,[])],
+        [ChildCompId,ChildProb,ChildCompSubId],
+        ( bigarray_get(CompTable,Child,(ChildCompId,ChildCompSubId)),
+          ( ChildCompId == CompId ->
+            ProdProb^1 is ProdProb^0,
+            Dependants^1 = [ChildCompSubId|Dependants^0]
+          ; ( ChildCompId < CompId ->
+              % Child is in lower component, then prob already known
+              bigarray_get(ProbTable,Child,ChildProb),
+              ($pp_in_log_scale->
+                ProdProb^1 is ProdProb^0 + ChildProb
+                ;ProdProb^1 is ProdProb^0 * ChildProb),
+              Dependants^1 = Dependants^0
+            ; % Edge to higher component, should not happen
+              $pp_raise_internal_error($msg(9802), invalid_component_dependence,$pp_update_lin_system/7)
+            )
+          )
+        )
+      ), % Check for number of dependants
+      ( Dependants = [] -> % Put into B
+        bigarray_get(B,CompSubId,TmpProb),
+        ($pp_in_log_scale->
+                ($pp_scaling_param(Scale),SumProb is TmpProb + exp(ProdProb)*Scale)
+          ;SumProb is TmpProb + ProdProb),
+        bigarray_put(B,CompSubId,SumProb)
+      ; ( Dependants = [DependantId] -> % Put into A
+          Index is (CompSubId - 1) * Length + DependantId,
+          bigarray_get(A,Index,TmpProb),
+          ($pp_in_log_scale->
+                  ($pp_scaling_param(Scale),SumProb is (TmpProb + exp(ProdProb)))
+            ;(SumProb is TmpProb + ProdProb)),
+          bigarray_put(A,Index,SumProb)
+        ; % Non-linear relation, can not solve it
+          $pp_raise_evaluation_error($msg(1402),['non-linear dependence'],non_linear_dependence,$pp_update_lin_system/7)
+        )
+      )
+    )
+  ).
+
+
