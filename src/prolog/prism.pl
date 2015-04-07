@@ -4993,7 +4993,8 @@ free_energy([G], FreeEnergy, L0, L1, L2) :-
 free_energy([G|Gs], FreeEnergy, L0, L1, L2) :- 
     !, 
     free_energy(G, _, _, _, L2_1), 
-    free_energy(Gs, F1, L0, L1, L2), 
+    free_energy(Gs, F1, L0, L1, L2_2),
+    L2 is L2_1 + L2_2,
     FreeEnergy is F1 + L2_1.
 
 free_energy(Goal) :- 
@@ -8586,6 +8587,13 @@ $pp_expand_values2(Start,End,Step,[Start|Ns]) :-
 lngamma(X,G) :-
     $pp_require_positive_number(X,$msg(3400),lngamma/2),
     $pc_lngamma(X,G).
+
+%%----------------------------------------
+%%  log-gamma function
+
+digamma(X,G) :-
+    $pp_require_positive_number(X,$msg(3400),digamma/2),
+    $pc_digamma(X,G).
 
 
 %%----------------------------------------
