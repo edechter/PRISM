@@ -5,7 +5,7 @@
 COMPILER    = Compile.sh
 TARGETS     = prism.out mpprism.out batch.out
 BUILDDIR  = ../../bin
-INSTALLDIR ?= /usr/local/
+INSTALLDIR  = /usr/local/opt/
 
 VERSION     = 2.2a1
 
@@ -67,12 +67,10 @@ PL_FOC_ALL  = $(PL_FOC)
 all: $(TARGETS)
 
 install: $(TARGETS)
-	test -d $(INSTALLDIR)/prism && mkdir $(INSTALLDIR)/prism \
-	echo "cp -fv $(TARGETS) $(INSTALLDIR)" \
-	cp -fv $(TARGETS) $(INSTALLDIR)/prism
+	./install.sh $(BUILDDIR) $(INSTALLDIR)  
 
 build: $(TARGETS)
-	cp $(TARGETS) $(BUILDDIR)
+	cp -v $(TARGETS) $(BUILDDIR)
 
 clean:
 	rm -f $(TARGETS) prism.pl mpprism.pl batch.pl
