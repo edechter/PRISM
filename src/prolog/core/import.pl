@@ -14,19 +14,33 @@
 
 */
 
+%% initialize system path on compilation.
+:-initialization($pp_init_sys_path).
+
+%% Public methods
+
 sys_path(Paths) :-
         $pp_sys_path(Paths).
 
 sys_path_append(Path) :-
         $pp_path_append(Path).
 
+import(File) :-
+        $pp_import(File).
+
 %--------------------------------------------------
 
-:- dynamic $pp_sys_path/1.
-$pp_sys_path(Ps) :-
+
+$pp_init_sys_path :-
         expand_environment('$PRISM_PATH', Path),
         write(Path), nl,
-        $pp_split_path(Path, Ps).
+        $pp_split_path(Path, Ps),
+        $pp_set_sys_path(Ps).
+
+:- dynamic $pp_sys_path/1.
+$pp_set_sys_path(Ps) :-
+        retractall($pp_sys_path(_)),
+        assert($pp_sys_path(Ps)).
 
 $pp_split_path(A, As) :-
         atomic_split_at(A, ';', As).
@@ -55,33 +69,43 @@ atoms_codes([], []) :- !.
 atoms_codes([A|As], [B|Bs]) :-
         atom_codes(A, B),
         atoms_codes(As, Bs).
-        
+
+
+atom_concats([], '') :- !.
+atom_concats([A|Rest], Out) :-
+        (
+         var(Out) ->
+         atom_concats(Rest, B),         
+         atom_concat(A, B, Out)
+         ;
+         atom_concat(A, B, Out),         
+         atom_concats(Rest, B)        
+        ).
+
 
         
 %----------------------------------------------------
 
-import(File) :-
-        $pp_import(File).
 
 $pp_import(File) :-
         catch(
-              cl(File),
-              error(file_not_found, _),
-              $pp_import_on_path(File)).
+               cl(File),
+               error(file_not_found, _),
+               $pp_import_on_path(File)).
 
 $pp_import_on_path(File) :-
         sys_path(Ps),
         $pp_import_on_path(File, Ps).
 
 $pp_import_on_path(File, []) :- 
-        throw(file_not_found_on_path, File),
+        throw(file_not_found_on_path(File)),
         !.
 $pp_import_on_path(File, [P|Ps]) :-
         atom_concats([P, '/', File], FullPath),
         catch(
-              cl(FullPath),
-              error(file_not_found, _),
-              $pp_import_on_path(File, Ps)
+               cl(FullPath),
+               error(file_not_found, _),
+               $pp_import_on_path(File, Ps)
              ).
  
-
+%----------------------------------------------------
