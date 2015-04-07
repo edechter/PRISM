@@ -4,7 +4,8 @@
 
 COMPILER    = Compile.sh
 TARGETS     = prism.out mpprism.out batch.out
-INSTALLDIR  = ../../bin
+BUILDDIR  = ../../bin
+INSTALLDIR ?= /usr/local/
 
 VERSION     = 2.2a1
 
@@ -48,13 +49,19 @@ PL_MP    = mp/mp_main.pl        \
 
 PL_BP    = bp/eval.pl
 
+BPEXTRA_DIR ?= /usr/local
+BPEXTRA_LIBDIR ?= $(BPEXTRA_DIR)/library
+PL_BPEXTRA  = $(wildcard $(BPEXTRA_LIBDIR)/*.pl)
+
 PL_CYCLE = cycle/lin_prob.pl    \
            cycle/nonlin_prob.pl      \
            cycle/trans_graph.pl \
            cycle/find_scc.pl    \
            cycle/solve_graph.pl
 
-PL_UP_ALL   = $(PL_CORE) $(PL_UP) $(PL_TRANS) $(PL_BP) $(PL_CYCLE)
+
+
+PL_UP_ALL   = $(PL_CORE) $(PL_UP) $(PL_TRANS) $(PL_BP) $(PL_BPEXTRA) $(PL_CYCLE)
 PL_MP_ALL   = $(PL_MP)
 PL_BAT_ALL  = $(PL_BAT)
 PL_FOC_ALL  = $(PL_FOC)
@@ -64,7 +71,12 @@ PL_FOC_ALL  = $(PL_FOC)
 all: $(TARGETS)
 
 install: $(TARGETS)
-	cp $(TARGETS) $(INSTALLDIR)
+	test -d $(INSTALLDIR)/prism && mkdir $(INSTALLDIR)/prism \
+	echo "cp -fv $(TARGETS) $(INSTALLDIR)" \
+	cp -fv $(TARGETS) $(INSTALLDIR)/prism
+
+build: $(TARGETS)
+	cp $(TARGETS) $(BUILDDIR)
 
 clean:
 	rm -f $(TARGETS) prism.pl mpprism.pl batch.pl
@@ -81,4 +93,4 @@ batch.pl: $(PL_BAT_ALL)
 %.out: %.pl $(COMPILER)
 	sh $(COMPILER) $<
 
-.PHONY: all install clean
+.PHONY: all build clean
