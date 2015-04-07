@@ -12,7 +12,8 @@ VERSION     = 2.2a1
 PL_CORE  = core/message.pl      \
            core/error.pl        \
            core/random.pl       \
-           core/format.pl
+           core/format.pl       \
+	   core/import.pl
 
 PL_TRANS = trans/trans.pl       \
            trans/dump.pl        \
@@ -49,10 +50,6 @@ PL_MP    = mp/mp_main.pl        \
 
 PL_BP    = bp/eval.pl
 
-BPEXTRA_DIR ?= /usr/local
-BPEXTRA_LIBDIR ?= $(BPEXTRA_DIR)/library
-PL_BPEXTRA  = $(wildcard $(BPEXTRA_LIBDIR)/*.pl)
-
 PL_CYCLE = cycle/lin_prob.pl    \
            cycle/nonlin_prob.pl      \
            cycle/trans_graph.pl \
@@ -60,8 +57,7 @@ PL_CYCLE = cycle/lin_prob.pl    \
            cycle/solve_graph.pl
 
 
-
-PL_UP_ALL   = $(PL_CORE) $(PL_UP) $(PL_TRANS) $(PL_BP) $(PL_BPEXTRA) $(PL_CYCLE)
+PL_UP_ALL   = $(PL_CORE) $(PL_UP) $(PL_TRANS) $(PL_BP) $(PL_CYCLE)
 PL_MP_ALL   = $(PL_MP)
 PL_BAT_ALL  = $(PL_BAT)
 PL_FOC_ALL  = $(PL_FOC)
