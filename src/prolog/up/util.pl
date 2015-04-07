@@ -1073,6 +1073,13 @@ lngamma(X,G) :-
     $pp_require_positive_number(X,$msg(3400),lngamma/2),
     $pc_lngamma(X,G).
 
+%%----------------------------------------
+%%  log-gamma function
+
+digamma(X,G) :-
+    $pp_require_positive_number(X,$msg(3400),digamma/2),
+    $pc_digamma(X,G).
+
 
 %%----------------------------------------
 %%  Garbage collection (a bit experimental)

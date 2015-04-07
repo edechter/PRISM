@@ -44,6 +44,124 @@ void bp4p_quit(int status) {
 #endif
 }
 
+<<<<<<< HEAD
+void bp4p_register_preds(void)
+{
+    /* core/idtable.c */
+    REGISTER_CPRED(prism_id_table_init,0);
+    REGISTER_CPRED(prism_goal_id_register,2);
+    REGISTER_CPRED(prism_sw_id_register,2);
+    REGISTER_CPRED(prism_sw_ins_id_register,2);
+    REGISTER_CPRED(prism_goal_id_get,2);
+    REGISTER_CPRED(prism_sw_id_get,2);
+    REGISTER_CPRED(prism_sw_ins_id_get,2);
+    REGISTER_CPRED(prism_goal_count,1);
+    REGISTER_CPRED(prism_sw_count,1);
+    REGISTER_CPRED(prism_sw_ins_count,1);
+    REGISTER_CPRED(prism_goal_term,2);
+    REGISTER_CPRED(prism_goal_term_nocopy,2);
+    REGISTER_CPRED(prism_sw_term,2);
+    REGISTER_CPRED(prism_sw_term_nocopy,2);
+    REGISTER_CPRED(prism_sw_ins_term,2);
+    REGISTER_CPRED(prism_sw_ins_term_nocopy,2);
+
+    /* core/random.c */
+    REGISTER_CPRED(random_auto_seed, 1);
+    REGISTER_CPRED(random_init_by_seed, 1);
+    REGISTER_CPRED(random_init_by_list, 1);
+    REGISTER_CPRED(random_float, 1);
+    REGISTER_CPRED(random_gaussian, 1);
+    REGISTER_CPRED(random_int, 2);
+    REGISTER_CPRED(random_int, 3);
+    REGISTER_CPRED(random_get_state, 1);
+    REGISTER_CPRED(random_set_state, 1);
+
+    /* up/em_preds.c */
+    REGISTER_CPRED(prism_prepare,4);
+    REGISTER_CPRED(prism_em,6);
+    REGISTER_CPRED(prism_vbem,2);
+    REGISTER_CPRED(prism_vbem,3);
+    REGISTER_CPRED(prism_both_em,2);
+    REGISTER_CPRED(compute_inside,2);
+    REGISTER_CPRED(compute_probf,1);
+    REGISTER_CPRED(compute_free_energy,4);
+
+    /* up/vt_preds.c */
+    REGISTER_CPRED(prism_vt,4);
+    REGISTER_CPRED(prism_vbvt,2);
+    REGISTER_CPRED(prism_both_vt,2);
+
+    /* up/mcmc.c */
+    REGISTER_CPRED(mcmc_prepare,3);
+    REGISTER_CPRED(mcmc_sample,7);
+    REGISTER_CPRED(mcmc_marginal,1);
+    REGISTER_CPRED(mcmc_predict,4);
+    REGISTER_CPRED(exact_marginal,3);
+    REGISTER_CPRED(clean_mcmc_samples,0);
+
+    /* up/viterbi.c */
+    REGISTER_CPRED(compute_viterbi,5);
+    REGISTER_CPRED(compute_n_viterbi,3);
+    REGISTER_CPRED(compute_n_viterbi_rerank,4);
+
+    /* up/hindsight.c */
+    REGISTER_CPRED(compute_hindsight,4);
+
+    /* up/graph.c */
+    REGISTER_CPRED(alloc_egraph,0);
+    REGISTER_CPRED(clean_base_egraph,0);
+    REGISTER_CPRED(clean_egraph,0);
+    REGISTER_CPRED(export_switch,2);
+    REGISTER_CPRED(add_egraph_path,3);
+    REGISTER_CPRED(alloc_sort_egraph,1);
+    REGISTER_CPRED(clean_external_tables,0);
+    REGISTER_CPRED(export_sw_info,1);
+    REGISTER_CPRED(import_sorted_graph_size,1);
+    REGISTER_CPRED(import_sorted_graph_gid,2);
+    REGISTER_CPRED(import_sorted_graph_paths,2);
+    REGISTER_CPRED(get_gnode_inside,2);
+    REGISTER_CPRED(get_gnode_outside,2);
+    REGISTER_CPRED(get_gnode_viterbi,2);
+    REGISTER_CPRED(get_snode_inside,2);
+    REGISTER_CPRED(get_snode_expectation,2);
+    REGISTER_CPRED(import_occ_switches,3);
+    REGISTER_CPRED(import_graph_stats,4);
+    REGISTER_CPRED(import_switch_stats,2);
+
+    /* up/flags.c */
+    REGISTER_CPRED(set_daem,1);
+    REGISTER_CPRED(set_em_message,1);
+    REGISTER_CPRED(set_em_progress,1);
+    REGISTER_CPRED(set_error_on_cycle,1);
+    REGISTER_CPRED(set_explicit_empty_expls,1);
+    REGISTER_CPRED(set_fix_init_order,1);
+    REGISTER_CPRED(set_init_method,1);
+    REGISTER_CPRED(set_itemp_init,1);
+    REGISTER_CPRED(set_itemp_rate,1);
+    REGISTER_CPRED(set_log_scale,1);
+    REGISTER_CPRED(set_max_iterate,1);
+    REGISTER_CPRED(set_mcmc_message,1);
+    REGISTER_CPRED(set_mcmc_progress,1);
+    REGISTER_CPRED(set_num_restart,1);
+    REGISTER_CPRED(set_prism_epsilon,1);
+    REGISTER_CPRED(set_show_itemp,1);
+    REGISTER_CPRED(set_std_ratio,1);
+    REGISTER_CPRED(set_verb_em,1);
+    REGISTER_CPRED(set_verb_graph,1);
+    REGISTER_CPRED(set_warn,1);
+    REGISTER_CPRED(set_debug_level,1);
+
+    /* up/util.c */
+    REGISTER_CPRED(lngamma,2);
+    REGISTER_CPRED(digamma,2);
+    REGISTER_CPRED(mult_ln,3);
+    REGISTER_CPRED(mp_mode,0);
+    REGISTER_CPRED(get_term_depth,2);
+    REGISTER_CPRED(mtrace,0);
+    REGISTER_CPRED(muntrace,0);
+    REGISTER_CPRED(sleep,1);
+
+=======
 void bp4p_register_preds(void) {
 	/* core/idtable.c */
 	REGISTER_CPRED(prism_id_table_init,0);
@@ -185,6 +303,7 @@ void bp4p_register_preds(void) {
 	REGISTER_CPRED(set_crf_ls_rho,1);
 	REGISTER_CPRED(set_crf_ls_c1,1);
 	REGISTER_CPRED(set_crf_penalty,1);
+>>>>>>> 8361929c6ea197ebfdc8dde113757218d9a29cce
 #ifdef MPI
 	/* mp/mp_preds.c */
 	REGISTER_CPRED(mp_size,1);
