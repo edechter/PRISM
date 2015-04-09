@@ -43,7 +43,7 @@ $pp_set_sys_path(Ps) :-
         assert($pp_sys_path(Ps)).
 
 $pp_split_path(A, As) :-
-        atomic_split_at(A, ';', As).
+        atomic_split_at(A, ':', As).
 
 $pp_path_append(Path) :-
         $pp_sys_path(Ps),
